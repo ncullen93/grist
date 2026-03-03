@@ -39,7 +39,7 @@ export function HelpDialog() {
     <Dialog open={open} onOpenChange={handleClose}>
       <button
         onClick={() => setOpen(true)}
-        className="cursor-pointer flex items-center justify-center size-10 rounded-full transition-colors hover:ring-2 hover:ring-border"
+        className="cursor-pointer flex items-center justify-center size-10 rounded-full transition-colors "
       >
         <HelpCircle className="size-5 text-muted-foreground" />
       </button>

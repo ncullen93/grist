@@ -57,14 +57,14 @@ export default function SignupLayout() {
   return (
     <div className="flex min-h-dvh flex-col sm:flex-row">
       {/* Left panel — form */}
-      <div className="flex w-full flex-col sm:w-[55%] sm:min-h-dvh">
+      <div className="flex w-full flex-col sm:w-[55%]  sm:min-h-dvh">
         <header className="px-6 pt-5 sm:px-10 sm:pt-6">
           <Link to="/" className="font-display font-extrabold">
             Grist Club
           </Link>
         </header>
 
-        <main className="flex flex-1 justify-center px-6 pt-10 pb-16 sm:px-10 sm:pt-20 sm:pb-24">
+        <main className="flex flex-1 justify-center px-6 pt-10 pb-16 sm:px-10 sm:pt-24 sm:pb-24">
           <div className="flex w-full max-w-md flex-col gap-9">
             {/* Progress bar */}
             <div className="flex gap-1.5">
@@ -80,7 +80,7 @@ export default function SignupLayout() {
 
             {/* Heading */}
             <div>
-              <h1 className="font-display text-2xl font-medium tracking-tight text-gray-900 sm:text-3xl">
+              <h1 className="font-display text-2xl font-medium tracking-normal text-gray-900 sm:text-3xl">
                 {step.title}
               </h1>
               <p className="mt-2 text-[15px] leading-relaxed text-gray-500">

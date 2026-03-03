@@ -31,7 +31,10 @@ export default function MemberLayout() {
       {/* Main content area */}
       <main className="flex-1 min-w-0 pb-16 md:pb-0 md:pt-2">
         <div className="bg-background md:rounded-tl-2xl md:border-l md:border-t md:border-border/60 md:shadow-sm h-full overflow-hidden">
-          <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden overscroll-none md:rounded-tl-2xl">
+          <div
+            ref={scrollRef}
+            className="h-full overflow-y-auto overflow-x-hidden overscroll-none md:rounded-tl-2xl"
+          >
             {/* Avatar overlay - desktop only, sticky at top-right */}
             <div className="hidden md:block sticky top-0 z-20 h-0 overflow-visible pointer-events-none">
               <div className="flex justify-end items-center h-18 px-8 pointer-events-none">
@@ -43,7 +46,7 @@ export default function MemberLayout() {
                     onOpenChange={setAvatarPopoverOpen}
                   >
                     <PopoverTrigger asChild>
-                      <button className="cursor-pointer flex items-center justify-center rounded-full transition-colors hover:ring-2 hover:ring-border">
+                      <button className="cursor-pointer flex items-center justify-center rounded-full transition-colors">
                         <Avatar>
                           <AvatarFallback className="text-sm font-medium bg-primary text-primary-foreground">
                             G

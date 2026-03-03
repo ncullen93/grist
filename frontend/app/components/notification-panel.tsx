@@ -6,10 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover";
-import {
-  allNotifications,
-  type Notification,
-} from "~/lib/demo-notifications";
+import { allNotifications, type Notification } from "~/lib/demo-notifications";
 
 export function NotificationPanel() {
   const [open, setOpen] = useState(false);
@@ -31,18 +28,14 @@ export function NotificationPanel() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className="relative cursor-pointer flex items-center justify-center size-10 rounded-full transition-colors hover:ring-2 hover:ring-border mr-2">
+        <button className="relative cursor-pointer flex items-center justify-center size-10 rounded-full transition-colors  mr-2">
           <Bell className="size-5 text-muted-foreground" />
           {unreadCount > 0 && (
             <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-destructive" />
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent
-        side="bottom"
-        align="end"
-        className="w-80 p-0"
-      >
+      <PopoverContent side="bottom" align="end" className="w-80 p-0">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h3 className="text-sm font-semibold text-foreground">
             Notifications

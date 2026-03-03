@@ -61,8 +61,7 @@ export default function MemberMarketplacePage() {
     <>
       <PageHeader title="Marketplace" />
 
-      {/* Sticky search bar */}
-      <div className="sticky top-18 z-10 bg-background">
+      <div className="bg-background">
         <div className="max-w-4xl mx-auto flex items-center gap-3 px-4 md:px-8 py-8">
           <div className="flex flex-1 items-center rounded-lg border border-border bg-background px-4 py-2.5">
             <Search className="mr-3 size-4 shrink-0 text-muted-foreground" />
