@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router";
-import { Plus, X } from "lucide-react";
+import { ImagePlus, X } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { PageHeader } from "~/components/page-header";
@@ -115,8 +115,7 @@ export default function MemberPostsNewMarketplacePage() {
         </div>
 
         {/* Photos card */}
-        <div className="mt-4 rounded-xl border border-border bg-background p-6">
-          <p className="text-sm font-medium text-foreground mb-4">Photos</p>
+        <div className="mt-4 rounded-xl bg-background ">
           <div className="grid grid-cols-4 gap-3">
             {images.map((img) => (
               <div
@@ -142,7 +141,7 @@ export default function MemberPostsNewMarketplacePage() {
               onClick={() => fileInputRef.current?.click()}
               className="flex aspect-square items-center justify-center rounded-xl border-2 border-dashed border-border text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
             >
-              <Plus className="size-6" />
+              <ImagePlus className="size-6" />
             </button>
           </div>
         </div>
