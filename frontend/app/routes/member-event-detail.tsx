@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { getEventById, allMembers, allEvents } from "~/lib/demo-data";
+import { getEventById, allMembers } from "~/lib/demo-data";
 import type { Route } from "./+types/member-event-detail";
 
 export function loader({ params }: Route.LoaderArgs) {
@@ -37,7 +37,7 @@ export default function MemberEventDetailPage({
           Events
         </Link>
       </header>
-      <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 md:px-8 py-8 pb-36">
         {/* Event info */}
         <div className="flex items-center justify-between gap-8">
           <div>
@@ -216,48 +216,6 @@ export default function MemberEventDetailPage({
           );
         })()}
 
-        {/* Related events */}
-        {(() => {
-          const related = allEvents
-            .filter((e) => e.id !== event.id)
-            .slice(0, 3);
-          if (related.length === 0) return null;
-          return (
-            <div className="mt-12">
-              <h2 className="font-display text-2xl font-semibold text-foreground">
-                More Events
-              </h2>
-              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {related.map((e) => (
-                  <Link
-                    key={e.id}
-                    to={`/m/events/${e.id}`}
-                    className="group"
-                  >
-                    <div className="relative overflow-hidden rounded-xl">
-                      <img
-                        src={e.image}
-                        alt={e.title}
-                        className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                      <span className="absolute top-3 right-3 rounded-full bg-black/50 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
-                        {e.type}
-                      </span>
-                    </div>
-                    <div className="mt-3">
-                      <h3 className="font-display text-base font-semibold text-foreground group-hover:text-primary transition-colors">
-                        {e.title}
-                      </h3>
-                      <p className="mt-0.5 text-sm text-muted-foreground">
-                        {e.date}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
       </div>
     </>
   );
