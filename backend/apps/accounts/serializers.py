@@ -27,9 +27,9 @@ class ApplicationSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    profile_slug = serializers.CharField(source="profile.slug", read_only=True)
+    profile_uid = serializers.CharField(source="profile.uid", read_only=True)
 
     class Meta:
         model = User
-        fields = ["id", "email", "first_name", "date_joined", "profile_slug", "is_staff"]
-        read_only_fields = ["id", "date_joined", "profile_slug", "is_staff"]
+        fields = ["id", "email", "first_name", "date_joined", "profile_uid", "is_staff"]
+        read_only_fields = ["id", "date_joined", "profile_uid", "is_staff"]

@@ -8,7 +8,7 @@ class ForumPostFilter(django_filters.FilterSet):
     channel = django_filters.CharFilter(field_name="channel__slug")
     topic = django_filters.CharFilter(method="topic_filter")
     search = django_filters.CharFilter(method="search_filter")
-    author = django_filters.CharFilter(field_name="author__profile__slug")
+    author = django_filters.CharFilter(field_name="author__profile__uid")
 
     class Meta:
         model = ForumPost

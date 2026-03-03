@@ -8,7 +8,7 @@ import type { Route } from "./+types/member-marketplace-detail";
 
 interface ListingReply {
   id: number;
-  author_slug: string;
+  author_uid: string;
   author_name: string;
   location: string;
   home_photo: string;
@@ -18,7 +18,7 @@ interface ListingReply {
 
 interface ListingDetail {
   id: number;
-  author_slug: string;
+  author_uid: string;
   author_name: string;
   location: string;
   home_photo: string;
@@ -226,7 +226,7 @@ export default function MemberMarketplaceDetailPage({
 
           <div className="mt-5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Link to={`/m/members/${listing.author_slug}`}>
+              <Link to={`/m/members/${listing.author_uid}`}>
                 <img
                   src={listing.home_photo}
                   alt=""
@@ -235,7 +235,7 @@ export default function MemberMarketplaceDetailPage({
               </Link>
               <div>
                 <Link
-                  to={`/m/members/${listing.author_slug}`}
+                  to={`/m/members/${listing.author_uid}`}
                   className="text-sm font-semibold text-foreground hover:text-primary transition-colors"
                 >
                   {listing.author_name}
@@ -316,7 +316,7 @@ export default function MemberMarketplaceDetailPage({
               {displayReplies.map((reply: ListingReply) => (
                 <div key={reply.id} className="px-6 py-5">
                   <div className="flex items-center gap-3">
-                    <Link to={`/m/members/${reply.author_slug}`}>
+                    <Link to={`/m/members/${reply.author_uid}`}>
                       <img
                         src={reply.home_photo}
                         alt=""
@@ -325,7 +325,7 @@ export default function MemberMarketplaceDetailPage({
                     </Link>
                     <div className="min-w-0 flex-1">
                       <Link
-                        to={`/m/members/${reply.author_slug}`}
+                        to={`/m/members/${reply.author_uid}`}
                         className="text-sm font-semibold text-foreground hover:text-primary transition-colors"
                       >
                         {reply.author_name}

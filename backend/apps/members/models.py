@@ -1,8 +1,15 @@
+import random
+import string
 import uuid
 
 from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
+
+
+def generate_uid():
+    alphabet = string.ascii_lowercase + string.digits
+    return "".join(random.choices(alphabet, k=6))
 
 
 class MemberProfile(models.Model):
@@ -15,6 +22,7 @@ class MemberProfile(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile"
     )
+    uid = models.CharField(max_length=6, unique=True, db_index=True, blank=True)
     slug = models.SlugField(max_length=100, unique=True, db_index=True, blank=True)
     name = models.CharField(max_length=200)
     location = models.CharField(max_length=200, blank=True)
@@ -36,6 +44,12 @@ class MemberProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
+        if not self.uid:
+            for _ in range(10):
+                candidate = generate_uid()
+                if not MemberProfile.objects.filter(uid=candidate).exclude(pk=self.pk).exists():
+                    self.uid = candidate
+                    break
         if not self.slug:
             base = slugify(self.name) or "member"
             self.slug = base

@@ -109,7 +109,7 @@ export default function SignupAddress({ actionData }: Route.ComponentProps) {
         disabled={!canContinue || isSubmitting}
         className="h-12 w-full rounded-lg bg-primary text-sm font-medium"
       >
-        {isSubmitting ? "Checking..." : "Continue"}
+        Continue
       </Button>
     </Form>
   );

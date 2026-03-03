@@ -8,7 +8,7 @@ class ListingFilter(django_filters.FilterSet):
     category = django_filters.CharFilter(field_name="category")
     tag = django_filters.CharFilter(method="tag_filter")
     search = django_filters.CharFilter(method="search_filter")
-    author = django_filters.CharFilter(field_name="author__profile__slug")
+    author = django_filters.CharFilter(field_name="author__profile__uid")
 
     class Meta:
         model = Listing

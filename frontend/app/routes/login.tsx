@@ -81,7 +81,7 @@ export default function Login({ actionData }: Route.ComponentProps) {
                   disabled={isSubmitting}
                   className="h-12 w-full rounded-lg bg-primary text-sm font-medium"
                 >
-                  {isSubmitting ? "Logging in..." : "Log in"}
+                  Log in
                 </Button>
                 <Link
                   to="/signup"

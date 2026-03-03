@@ -5,7 +5,7 @@ from .models import BlogComment, BlogPost
 
 
 class BlogCommentSerializer(serializers.ModelSerializer):
-    author_slug = serializers.CharField(source="author.profile.slug", read_only=True)
+    author_uid = serializers.CharField(source="author.profile.uid", read_only=True)
     author_name = serializers.CharField(source="author.profile.name", read_only=True)
     author_photo = serializers.URLField(source="author.profile.photo", read_only=True)
     author_location = serializers.CharField(source="author.profile.location", read_only=True)
@@ -14,7 +14,7 @@ class BlogCommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = BlogComment
         fields = [
-            "id", "author_slug", "author_name", "author_photo",
+            "id", "author_uid", "author_name", "author_photo",
             "author_location", "body", "time", "created_at",
         ]
 
@@ -29,7 +29,7 @@ class BlogCommentCreateSerializer(serializers.ModelSerializer):
 
 
 class BlogPostListSerializer(serializers.ModelSerializer):
-    author_slug = serializers.CharField(source="author.profile.slug", read_only=True)
+    author_uid = serializers.CharField(source="author.profile.uid", read_only=True)
     author_name = serializers.CharField(source="author.profile.name", read_only=True)
     author_photo = serializers.URLField(source="author.profile.photo", read_only=True)
     author_location = serializers.CharField(source="author.profile.location", read_only=True)
@@ -40,7 +40,7 @@ class BlogPostListSerializer(serializers.ModelSerializer):
     class Meta:
         model = BlogPost
         fields = [
-            "id", "author_slug", "author_name", "author_photo",
+            "id", "author_uid", "author_name", "author_photo",
             "author_location", "title", "content", "image",
             "likes_count", "comment_count", "time", "created_at",
             "status",

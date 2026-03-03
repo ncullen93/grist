@@ -10,7 +10,7 @@ import type { Route } from "./+types/member-blog";
 
 interface BlogPostItem {
   id: number;
-  author_slug: string;
+  author_uid: string;
   author_name: string;
   author_photo: string;
   author_location: string;

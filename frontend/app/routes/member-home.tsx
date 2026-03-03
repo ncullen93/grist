@@ -15,7 +15,7 @@ import type { Route } from "./+types/member-home";
 
 interface BlogPost {
   id: number;
-  author_slug: string;
+  author_uid: string;
   author_name: string;
   author_photo: string;
   author_location: string;
@@ -42,7 +42,7 @@ interface EventItem {
 
 interface ForumPost {
   id: number;
-  author_slug: string;
+  author_uid: string;
   author_name: string;
   location: string;
   home_photo: string;
@@ -55,7 +55,7 @@ interface ForumPost {
 }
 
 interface MemberItem {
-  slug: string;
+  uid: string;
   name: string;
   location: string;
   home_style: string;
@@ -346,7 +346,7 @@ export default function MemberHomePage({ loaderData }: Route.ComponentProps) {
                 case "forum":
                   return <ForumCard key={`forum-${item.data.id}`} post={item.data} />;
                 case "member":
-                  return <MemberCard key={`member-${item.data.slug}`} member={item.data} />;
+                  return <MemberCard key={`member-${item.data.uid}`} member={item.data} />;
               }
             })
           )}
@@ -505,7 +505,7 @@ function ForumCard({ post }: { post: ForumPost }) {
 function MemberCard({ member }: { member: MemberItem }) {
   return (
     <Link
-      to={`/m/members/${member.slug}`}
+      to={`/m/members/${member.uid}`}
       className="group flex items-center gap-4 rounded-xl border border-border px-6 py-5 transition-colors hover:bg-muted/30"
     >
       <img

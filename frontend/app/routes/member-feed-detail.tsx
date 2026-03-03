@@ -8,7 +8,7 @@ import type { Route } from "./+types/member-feed-detail";
 
 interface BlogComment {
   id: number;
-  author_slug: string;
+  author_uid: string;
   author_name: string;
   author_photo: string;
   author_location: string;
@@ -18,7 +18,7 @@ interface BlogComment {
 
 interface BlogPost {
   id: number;
-  author_slug: string;
+  author_uid: string;
   author_name: string;
   author_photo: string;
   author_location: string;
@@ -185,7 +185,7 @@ export default function MemberFeedDetailPage({
       <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
         {/* Author */}
         <div className="flex items-center gap-3">
-          <Link to={`/m/members/${post.author_slug}`}>
+          <Link to={`/m/members/${post.author_uid}`}>
             <img
               src={post.author_photo}
               alt=""
@@ -194,7 +194,7 @@ export default function MemberFeedDetailPage({
           </Link>
           <div>
             <Link
-              to={`/m/members/${post.author_slug}`}
+              to={`/m/members/${post.author_uid}`}
               className="text-sm font-medium text-foreground hover:text-primary transition-colors"
             >
               {post.author_name}
@@ -243,7 +243,7 @@ export default function MemberFeedDetailPage({
               {displayComments.map((comment: BlogComment) => (
                 <div key={comment.id} className="px-6 py-5">
                   <div className="flex items-center gap-3">
-                    <Link to={`/m/members/${comment.author_slug}`}>
+                    <Link to={`/m/members/${comment.author_uid}`}>
                       <img
                         src={comment.author_photo}
                         alt=""
@@ -252,7 +252,7 @@ export default function MemberFeedDetailPage({
                     </Link>
                     <div className="min-w-0 flex-1">
                       <Link
-                        to={`/m/members/${comment.author_slug}`}
+                        to={`/m/members/${comment.author_uid}`}
                         className="text-sm font-semibold text-foreground hover:text-primary transition-colors"
                       >
                         {comment.author_name}

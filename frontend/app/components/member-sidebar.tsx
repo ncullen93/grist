@@ -20,7 +20,7 @@ interface User {
   id: string;
   email: string;
   first_name: string;
-  profile_slug?: string;
+  profile_uid?: string;
   is_staff?: boolean;
 }
 
@@ -91,7 +91,7 @@ export function MemberSidebar({ user }: { user?: User }) {
 
   const initial = user?.first_name?.charAt(0).toUpperCase() || "G";
   const displayName = user?.first_name || "Grist Club";
-  const profileUrl = user?.profile_slug ? `/m/members/${user.profile_slug}` : "/m/profile";
+  const profileUrl = user?.profile_uid ? `/m/members/${user.profile_uid}` : "/m/profile";
 
   const isActive = (item: (typeof navItems)[number]) => {
     if (item.exact) return location.pathname === item.url;

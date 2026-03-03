@@ -71,12 +71,12 @@ export async function loader({ request }: Route.LoaderArgs) {
     const profileRes = await apiGet(request, "/api/members/me/");
     if (!profileRes.ok) return redirect("/login");
     const profile = await profileRes.json();
-    const slug = profile.slug;
+    const uid = profile.uid;
 
     const [blogRes, forumRes, listingRes] = await Promise.all([
-      apiGet(request, `/api/blog/posts/?author=${slug}`),
-      apiGet(request, `/api/forum/posts/?author=${slug}`),
-      apiGet(request, `/api/marketplace/listings/?author=${slug}`),
+      apiGet(request, `/api/blog/posts/?author=${uid}`),
+      apiGet(request, `/api/forum/posts/?author=${uid}`),
+      apiGet(request, `/api/marketplace/listings/?author=${uid}`),
     ]);
 
     const blogData = blogRes.ok ? await blogRes.json() : { results: [] };

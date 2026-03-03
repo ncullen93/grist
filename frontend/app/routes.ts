@@ -41,7 +41,7 @@ export default [
     route("events", "routes/member-events.tsx"),
     route("events/:id", "routes/member-event-detail.tsx"),
     route("members", "routes/member-directory.tsx"),
-    route("members/:slug", "routes/member-profile-detail.tsx"),
+    route("members/:uid", "routes/member-profile-detail.tsx"),
     route("profile", "routes/member-profile.tsx"),
     route("profile/overview", "routes/member-profile-overview.tsx"),
     route("settings", "routes/member-settings.tsx"),

@@ -30,6 +30,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 type Member = {
+  uid: string;
   slug: string;
   name: string;
   location: string;
@@ -104,12 +105,12 @@ export default function AdminMembersPage({ loaderData }: Route.ComponentProps) {
                   <tbody>
                     {members.map((member: Member) => (
                       <tr
-                        key={member.slug}
+                        key={member.uid}
                         className="border-b border-border last:border-0"
                       >
                         <td className="px-6 py-4">
                           <Link
-                            to={`/m/members/${member.slug}`}
+                            to={`/m/members/${member.uid}`}
                             className="flex items-center gap-3 hover:text-primary transition-colors"
                           >
                             {member.photo ? (

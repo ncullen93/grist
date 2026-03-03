@@ -41,7 +41,7 @@ class TopicSerializer(serializers.ModelSerializer):
 
 
 class ForumReplySerializer(serializers.ModelSerializer):
-    author_slug = serializers.CharField(source="author.profile.slug", read_only=True)
+    author_uid = serializers.CharField(source="author.profile.uid", read_only=True)
     author_name = serializers.CharField(source="author.profile.name", read_only=True)
     location = serializers.CharField(source="author.profile.location", read_only=True)
     home_photo = serializers.URLField(source="author.profile.photo", read_only=True)
@@ -50,7 +50,7 @@ class ForumReplySerializer(serializers.ModelSerializer):
     class Meta:
         model = ForumReply
         fields = [
-            "id", "author_slug", "author_name", "location", "home_photo",
+            "id", "author_uid", "author_name", "location", "home_photo",
             "body", "time", "created_at",
         ]
 
@@ -65,7 +65,7 @@ class ForumReplyCreateSerializer(serializers.ModelSerializer):
 
 
 class ForumPostListSerializer(serializers.ModelSerializer):
-    author_slug = serializers.CharField(source="author.profile.slug", read_only=True)
+    author_uid = serializers.CharField(source="author.profile.uid", read_only=True)
     author_name = serializers.CharField(source="author.profile.name", read_only=True)
     location = serializers.CharField(source="author.profile.location", read_only=True)
     home_photo = serializers.URLField(source="author.profile.photo", read_only=True)
@@ -81,7 +81,7 @@ class ForumPostListSerializer(serializers.ModelSerializer):
     class Meta:
         model = ForumPost
         fields = [
-            "id", "author_slug", "author_name", "location", "home_photo",
+            "id", "author_uid", "author_name", "location", "home_photo",
             "channel_name", "channel_slug", "topic_names", "title", "body", "image",
             "pinned", "likes_count", "reply_count", "time", "created_at",
             "last_reply_time", "last_reply_author_name",

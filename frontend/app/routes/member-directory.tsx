@@ -27,6 +27,7 @@ import { apiGet, apiPost } from "~/lib/api.server";
 import type { Route } from "./+types/member-directory";
 
 interface MemberItem {
+  uid: string;
   slug: string;
   name: string;
   location: string;
@@ -432,8 +433,8 @@ export default function MemberDirectoryPage({ loaderData }: Route.ComponentProps
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {items.map((member) => (
                 <Link
-                  key={member.slug}
-                  to={`/m/members/${member.slug}`}
+                  key={member.uid}
+                  to={`/m/members/${member.uid}`}
                   className="group"
                 >
                   <div className="relative overflow-hidden rounded-xl">

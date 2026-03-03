@@ -25,6 +25,7 @@ from apps.notifications.models import Notification
 
 MEMBERS = [
     {
+        "uid": "k7x2mq",
         "slug": "margaret-h",
         "name": "Margaret H.",
         "location": "Savannah, GA",
@@ -45,6 +46,7 @@ MEMBERS = [
         ],
     },
     {
+        "uid": "p3n8vf",
         "slug": "james-w",
         "name": "James W.",
         "location": "Charleston, SC",
@@ -65,6 +67,7 @@ MEMBERS = [
         ],
     },
     {
+        "uid": "r4w9ht",
         "slug": "caroline-a",
         "name": "Caroline A.",
         "location": "Richmond, VA",
@@ -85,6 +88,7 @@ MEMBERS = [
         ],
     },
     {
+        "uid": "d6j1yc",
         "slug": "robert-e",
         "name": "Robert E.",
         "location": "New Orleans, LA",
@@ -105,6 +109,7 @@ MEMBERS = [
         ],
     },
     {
+        "uid": "m5b3zn",
         "slug": "susan-p",
         "name": "Susan P.",
         "location": "Hudson, NY",
@@ -125,6 +130,7 @@ MEMBERS = [
         ],
     },
     {
+        "uid": "t8g4xk",
         "slug": "david-c",
         "name": "David C.",
         "location": "San Francisco, CA",
@@ -145,6 +151,7 @@ MEMBERS = [
         ],
     },
     {
+        "uid": "w2f6sa",
         "slug": "eleanor-m",
         "name": "Eleanor M.",
         "location": "Newport, RI",
@@ -165,6 +172,7 @@ MEMBERS = [
         ],
     },
     {
+        "uid": "q9e7lp",
         "slug": "thomas-g",
         "name": "Thomas G.",
         "location": "Lexington, KY",
@@ -185,6 +193,7 @@ MEMBERS = [
         ],
     },
     {
+        "uid": "v1c5rd",
         "slug": "patricia-q",
         "name": "Patricia Q.",
         "location": "Portland, ME",
@@ -852,7 +861,7 @@ NOTIFICATIONS = [
         "title": "Thomas G. joined Grist Club",
         "body": "1835 Federal in Lexington, KY",
         "read": True,
-        "href": "/m/members/thomas-g",
+        "href": "/m/members/q9e7lp",
         "actor_slug": "thomas-g",
     },
     {
@@ -868,7 +877,7 @@ NOTIFICATIONS = [
         "title": "Eleanor M. joined Grist Club",
         "body": "1868 Stick Style in Newport, RI",
         "read": True,
-        "href": "/m/members/eleanor-m",
+        "href": "/m/members/w2f6sa",
         "actor_slug": "eleanor-m",
     },
     {
@@ -960,6 +969,7 @@ class Command(BaseCommand):
             )
             MemberProfile.objects.create(
                 user=user,
+                uid=m["uid"],
                 slug=m["slug"],
                 name=m["name"],
                 location=m["location"],

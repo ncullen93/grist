@@ -25,7 +25,7 @@ interface Channel {
 
 interface ForumPostItem {
   id: number;
-  author_slug: string;
+  author_uid: string;
   author_name: string;
   location: string;
   home_photo: string;

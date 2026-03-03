@@ -120,7 +120,7 @@ export default function SignupAccount({
           disabled={!canContinue || isSubmitting}
           className="h-12 w-full rounded-lg bg-primary text-sm font-medium"
         >
-          {isSubmitting ? "Creating account..." : "Continue"}
+          Continue
         </Button>
         <Link
           to="/signup"

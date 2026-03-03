@@ -7,7 +7,7 @@ class MemberProfileListSerializer(serializers.ModelSerializer):
     class Meta:
         model = MemberProfile
         fields = [
-            "slug", "name", "location", "state", "home_style", "home_year",
+            "uid", "slug", "name", "location", "state", "home_style", "home_year",
             "home_name", "photo", "tags", "member_since",
         ]
 
@@ -18,7 +18,7 @@ class MemberProfileDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = MemberProfile
         fields = [
-            "slug", "name", "location", "state", "home_style", "home_year",
+            "uid", "slug", "name", "location", "state", "home_style", "home_year",
             "home_name", "bio", "photo", "tags", "member_since", "registry",
             "story", "onboarding_completed", "profile_visibility", "is_following",
         ]

@@ -20,6 +20,20 @@ import { apiGet, apiPost, apiDelete } from "~/lib/api.server";
 import { redirect } from "react-router";
 import type { Route } from "./+types/member-profile-detail";
 
+interface EventItem {
+  id: number;
+  title: string;
+  subtitle: string;
+  date: string;
+  time: string;
+  type: string;
+  status: string;
+  image: string;
+  spots: number | null;
+  attendees: number;
+  rsvped: boolean;
+}
+
 interface PostItem {
   type: "blog" | "forum" | "marketplace";
   id: number;
@@ -31,24 +45,15 @@ interface PostItem {
   created_at: string;
 }
 
-interface ActivityItem {
-  type: string;
-  title: string;
-  description: string;
-  href: string;
-  time: string;
-  created_at: string;
-}
-
 export async function loader({ request, params }: Route.LoaderArgs) {
   try {
-    const [memberRes, blogRes, forumRes, listingRes, activityRes] =
+    const [memberRes, blogRes, forumRes, listingRes, eventsRes] =
       await Promise.all([
-        apiGet(request, `/api/members/${params.slug}/`),
-        apiGet(request, `/api/blog/posts/?author=${params.slug}`),
-        apiGet(request, `/api/forum/posts/?author=${params.slug}`),
-        apiGet(request, `/api/marketplace/listings/?author=${params.slug}`),
-        apiGet(request, `/api/members/${params.slug}/activity/`),
+        apiGet(request, `/api/members/${params.uid}/`),
+        apiGet(request, `/api/blog/posts/?author=${params.uid}`),
+        apiGet(request, `/api/forum/posts/?author=${params.uid}`),
+        apiGet(request, `/api/marketplace/listings/?author=${params.uid}`),
+        apiGet(request, `/api/members/${params.uid}/events/`),
       ]);
 
     if (!memberRes.ok) {
@@ -63,8 +68,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     const listingData = listingRes.ok
       ? await listingRes.json()
       : { results: [] };
-    const activityData: ActivityItem[] = activityRes.ok
-      ? await activityRes.json()
+    const eventsData: EventItem[] = eventsRes.ok
+      ? await eventsRes.json()
       : [];
 
     // Build unified posts list
@@ -140,7 +145,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
 
-    return { member, posts, activity: activityData };
+    return { member, posts, events: eventsData };
   } catch (e) {
     if (e instanceof Response) throw e;
     return redirect("/login");
@@ -150,16 +155,16 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 export async function action({ request, params }: Route.ActionArgs) {
   const formData = await request.formData();
   const intent = formData.get("intent") as string;
-  const slug = params.slug;
+  const uid = params.uid;
 
   try {
     if (intent === "follow") {
-      const res = await apiPost(request, `/api/members/${slug}/follow/`);
+      const res = await apiPost(request, `/api/members/${uid}/follow/`);
       if (!res.ok) return { error: "Failed to follow." };
       return { following: true };
     }
     if (intent === "unfollow") {
-      const res = await apiDelete(request, `/api/members/${slug}/follow/`);
+      const res = await apiDelete(request, `/api/members/${uid}/follow/`);
       if (!res.ok) return { error: "Failed to unfollow." };
       return { following: false };
     }
@@ -267,7 +272,7 @@ function getPostLabel(type: PostItem["type"]) {
 export default function MemberProfileDetailPage({
   loaderData,
 }: Route.ComponentProps) {
-  const { member, posts, activity } = loaderData;
+  const { member, posts, events } = loaderData;
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "overview";
   const setActiveTab = (value: string) => {
@@ -353,7 +358,7 @@ export default function MemberProfileDetailPage({
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="posts">Posts</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
+            <TabsTrigger value="events">Events</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="min-h-[70dvh]">
@@ -469,45 +474,45 @@ export default function MemberProfileDetailPage({
             </div>
           </TabsContent>
 
-          <TabsContent value="activity" className="min-h-[70dvh]">
+          <TabsContent value="events" className="min-h-[70dvh]">
             <div className="mt-6">
-              {activity.length === 0 ? (
+              {events.length === 0 ? (
                 <div className="rounded-xl border border-border p-16 text-center">
                   <p className="text-sm text-muted-foreground">
-                    No activity yet.
+                    No events yet.
                   </p>
                 </div>
               ) : (
-                <div className="rounded-xl border border-border divide-y divide-border">
-                  {activity.map((item, i) => (
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {events.map((event) => (
                     <Link
-                      key={`${item.type}-${i}`}
-                      to={item.href}
-                      className="group flex items-center gap-4 px-6 py-4 transition-colors hover:bg-muted/30"
+                      key={event.id}
+                      to={`/m/events/${event.id}`}
+                      className="group"
                     >
-                      <div className="flex size-9 items-center justify-center rounded-full bg-muted shrink-0">
-                        <span className="text-sm">
-                          {item.type.includes("like")
-                            ? "♥"
-                            : item.type.includes("rsvp")
-                              ? "📅"
-                              : item.type.includes("reply") ||
-                                  item.type.includes("comment")
-                                ? "💬"
-                                : "✏️"}
+                      <div className="relative overflow-hidden rounded-xl">
+                        <img
+                          src={event.image}
+                          alt={event.title}
+                          className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                        <span className="absolute top-3 right-3 rounded-full bg-black/50 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                          {event.type}
                         </span>
+                        {event.status === "past" && (
+                          <span className="absolute top-3 left-3 rounded-full bg-black/50 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                            Attended
+                          </span>
+                        )}
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                          {item.title}
-                        </p>
-                        <p className="mt-0.5 text-sm text-muted-foreground truncate">
-                          {item.description}
+                      <div className="mt-3">
+                        <h3 className="font-display text-base font-semibold text-foreground group-hover:text-primary transition-colors">
+                          {event.title}
+                        </h3>
+                        <p className="mt-0.5 text-sm text-muted-foreground">
+                          {event.date}
                         </p>
                       </div>
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {item.time}
-                      </span>
                     </Link>
                   ))}
                 </div>

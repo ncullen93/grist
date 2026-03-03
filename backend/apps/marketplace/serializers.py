@@ -11,7 +11,7 @@ class ListingTagSerializer(serializers.ModelSerializer):
 
 
 class ListingReplySerializer(serializers.ModelSerializer):
-    author_slug = serializers.CharField(source="author.profile.slug", read_only=True)
+    author_uid = serializers.CharField(source="author.profile.uid", read_only=True)
     author_name = serializers.CharField(source="author.profile.name", read_only=True)
     location = serializers.CharField(source="author.profile.location", read_only=True)
     home_photo = serializers.URLField(source="author.profile.photo", read_only=True)
@@ -20,7 +20,7 @@ class ListingReplySerializer(serializers.ModelSerializer):
     class Meta:
         model = ListingReply
         fields = [
-            "id", "author_slug", "author_name", "location", "home_photo",
+            "id", "author_uid", "author_name", "location", "home_photo",
             "body", "time", "created_at",
         ]
 
@@ -35,7 +35,7 @@ class ListingReplyCreateSerializer(serializers.ModelSerializer):
 
 
 class ListingListSerializer(serializers.ModelSerializer):
-    author_slug = serializers.CharField(source="author.profile.slug", read_only=True)
+    author_uid = serializers.CharField(source="author.profile.uid", read_only=True)
     author_name = serializers.CharField(source="author.profile.name", read_only=True)
     location = serializers.CharField(source="author.profile.location", read_only=True)
     home_photo = serializers.URLField(source="author.profile.photo", read_only=True)
@@ -47,7 +47,7 @@ class ListingListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Listing
         fields = [
-            "id", "author_slug", "author_name", "location", "home_photo",
+            "id", "author_uid", "author_name", "location", "home_photo",
             "category", "title", "description", "price", "image",
             "condition", "tag_names", "likes_count", "reply_count", "time", "created_at",
         ]

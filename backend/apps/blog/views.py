@@ -22,10 +22,10 @@ class BlogPostViewSet(viewsets.ModelViewSet):
         # Admin with ?all=true sees everything
         if self.request.query_params.get("all") and self.request.user.is_staff:
             return qs
-        author_slug = self.request.query_params.get("author")
-        if author_slug:
+        author_uid = self.request.query_params.get("author")
+        if author_uid:
             # Author's own dashboard: show all posts (drafts + published)
-            qs = qs.filter(author__profile__slug=author_slug)
+            qs = qs.filter(author__profile__uid=author_uid)
         elif self.action in ("retrieve", "update", "partial_update", "destroy", "comment", "like"):
             # Allow authors to access their own drafts; others see published only
             from django.db.models import Q

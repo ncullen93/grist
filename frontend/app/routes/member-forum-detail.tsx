@@ -7,7 +7,7 @@ import type { Route } from "./+types/member-forum-detail";
 
 interface ForumReply {
   id: number;
-  author_slug: string;
+  author_uid: string;
   author_name: string;
   location: string;
   home_photo: string;
@@ -17,7 +17,7 @@ interface ForumReply {
 
 interface ForumPost {
   id: number;
-  author_slug: string;
+  author_uid: string;
   author_name: string;
   location: string;
   home_photo: string;
@@ -213,7 +213,7 @@ export default function MemberForumDetailPage({
 
           <div className="mt-5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Link to={`/m/members/${post.author_slug}`}>
+              <Link to={`/m/members/${post.author_uid}`}>
                 <img
                   src={post.home_photo}
                   alt=""
@@ -222,7 +222,7 @@ export default function MemberForumDetailPage({
               </Link>
               <div>
                 <Link
-                  to={`/m/members/${post.author_slug}`}
+                  to={`/m/members/${post.author_uid}`}
                   className="text-sm font-semibold text-foreground hover:text-primary transition-colors"
                 >
                   {post.author_name}
@@ -267,7 +267,7 @@ export default function MemberForumDetailPage({
               {displayReplies.map((reply: ForumReply) => (
                 <div key={reply.id} className="px-6 py-5">
                   <div className="flex items-center gap-3">
-                    <Link to={`/m/members/${reply.author_slug}`}>
+                    <Link to={`/m/members/${reply.author_uid}`}>
                       <img
                         src={reply.home_photo}
                         alt=""
@@ -276,7 +276,7 @@ export default function MemberForumDetailPage({
                     </Link>
                     <div className="min-w-0 flex-1">
                       <Link
-                        to={`/m/members/${reply.author_slug}`}
+                        to={`/m/members/${reply.author_uid}`}
                         className="text-sm font-semibold text-foreground hover:text-primary transition-colors"
                       >
                         {reply.author_name}
