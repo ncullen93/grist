@@ -4,7 +4,7 @@ import type { Route } from "./+types/admin-event-edit";
 import { apiGet, apiPatch, apiDelete } from "~/lib/api.server";
 import { redirect } from "react-router";
 import { Button } from "~/components/ui/button";
-import { ArrowLeft, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 
 const inputClass =
   "w-full rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary/30";
@@ -132,13 +132,17 @@ export default function AdminEventEditPage({
   return (
     <>
       <header className="px-4 md:px-8 h-18 flex items-center bg-background shrink-0 border-b border-border sticky top-0 z-10">
-        <Link
-          to="/m/admin/events"
-          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Admin
-        </Link>
+        <nav className="flex items-center gap-1.5 text-sm">
+          <Link to="/m/admin" className="font-medium text-muted-foreground hover:text-foreground transition-colors">
+            Admin
+          </Link>
+          <span className="text-muted-foreground/40">/</span>
+          <Link to="/m/admin/events" className="font-medium text-muted-foreground hover:text-foreground transition-colors">
+            Events
+          </Link>
+          <span className="text-muted-foreground/40">/</span>
+          <span className="font-semibold text-foreground">Edit Event</span>
+        </nav>
       </header>
       <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
         {actionData?.error && (

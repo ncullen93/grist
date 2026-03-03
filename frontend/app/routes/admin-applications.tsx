@@ -9,7 +9,7 @@ import {
   TabsContent,
 } from "~/components/ui/tabs";
 import { Button } from "~/components/ui/button";
-import { ArrowLeft, Check, X, Plus } from "lucide-react";
+import { Check, X, Plus } from "lucide-react";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const [meRes, applicationsRes, codesRes] = await Promise.all([
@@ -187,13 +187,13 @@ export default function AdminApplicationsPage({ loaderData }: Route.ComponentPro
   return (
     <>
       <header className="px-4 md:px-8 h-18 flex items-center bg-background shrink-0 border-b border-border sticky top-0 z-10">
-        <Link
-          to="/m/admin"
-          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Admin
-        </Link>
+        <nav className="flex items-center gap-1.5 text-sm">
+          <Link to="/m/admin" className="font-medium text-muted-foreground hover:text-foreground transition-colors">
+            Admin
+          </Link>
+          <span className="text-muted-foreground/40">/</span>
+          <span className="font-semibold text-foreground">Applications</span>
+        </nav>
       </header>
       <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
