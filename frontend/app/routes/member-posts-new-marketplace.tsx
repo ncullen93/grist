@@ -117,7 +117,7 @@ export default function MemberPostsNewMarketplacePage() {
         {/* Photos card */}
         <div className="mt-4 rounded-xl border border-border bg-background p-6">
           <p className="text-sm font-medium text-foreground mb-4">Photos</p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-4 gap-3">
             {images.map((img) => (
               <div
                 key={img.id}

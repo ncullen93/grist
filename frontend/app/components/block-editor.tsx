@@ -447,9 +447,7 @@ export function BlockEditor({
                   if (el) textareaEls.current.set(block.id, el);
                   else textareaEls.current.delete(block.id);
                 }}
-                placeholder={
-                  i === 0 && blocks.length === 1 ? placeholder : ""
-                }
+                placeholder={i === 0 && blocks.length === 1 ? placeholder : ""}
               />
             </div>
           ) : (
@@ -498,7 +496,7 @@ export function BlockEditor({
         )}
         {/* Empty space at bottom — click to focus last text block */}
         <div
-          className="min-h-24 cursor-text"
+          className="min-h-32 cursor-text"
           onMouseDown={(e) => {
             e.preventDefault();
             const last = [...blocks].reverse().find((b) => b.type === "text");
