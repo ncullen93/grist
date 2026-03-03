@@ -28,6 +28,7 @@ urlpatterns = [
     path("api/auth/", include("apps.accounts.urls")),
     path("api/settings/", MemberSettingsView.as_view(), name="member-settings"),
     path("api/support/", SupportRequestView.as_view(), name="support-request"),
+    path("api/admin/", include("apps.admin_api.urls")),
 ]
 
 # HomeFeedView

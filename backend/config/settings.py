@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "apps.marketplace",
     "apps.events",
     "apps.notifications",
+    "apps.admin_api",
 ]
 
 MIDDLEWARE = [

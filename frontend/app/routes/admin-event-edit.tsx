@@ -19,7 +19,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const user = await meRes.json();
   if (!user.is_staff) return redirect("/m/home");
 
-  if (!eventRes.ok) return redirect("/m/admin");
+  if (!eventRes.ok) return redirect("/m/admin/events");
   const event = await eventRes.json();
 
   return { user, event };
@@ -31,7 +31,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 
   if (intent === "delete") {
     const res = await apiDelete(request, `/api/events/${params.id}/`);
-    if (res.ok || res.status === 204) return redirect("/m/admin");
+    if (res.ok || res.status === 204) return redirect("/m/admin/events");
     return { error: "Failed to delete event." };
   }
 
@@ -66,7 +66,7 @@ export async function action({ request, params }: Route.ActionArgs) {
     return { error: "Failed to update event.", details: errors };
   }
 
-  return redirect("/m/admin");
+  return redirect("/m/admin/events");
 }
 
 interface AgendaItem {
@@ -133,7 +133,7 @@ export default function AdminEventEditPage({
     <>
       <header className="px-4 md:px-8 h-18 flex items-center bg-background shrink-0 border-b border-border sticky top-0 z-10">
         <Link
-          to="/m/admin"
+          to="/m/admin/events"
           className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -483,7 +483,7 @@ export default function AdminEventEditPage({
                 Save Changes
               </Button>
               <Link
-                to="/m/admin"
+                to="/m/admin/events"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Cancel

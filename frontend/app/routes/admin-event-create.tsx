@@ -51,7 +51,7 @@ export async function action({ request }: Route.ActionArgs) {
     return { error: "Failed to create event.", details: errors };
   }
 
-  return redirect("/m/admin");
+  return redirect("/m/admin/events");
 }
 
 interface AgendaItem {
@@ -104,7 +104,7 @@ export default function AdminEventCreatePage() {
     <>
       <header className="px-4 md:px-8 h-18 flex items-center bg-background shrink-0 border-b border-border sticky top-0 z-10">
         <Link
-          to="/m/admin"
+          to="/m/admin/events"
           className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -443,7 +443,7 @@ export default function AdminEventCreatePage() {
               {isSubmitting ? "Creating..." : "Create Event"}
             </Button>
             <Link
-              to="/m/admin"
+              to="/m/admin/events"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Cancel

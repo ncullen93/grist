@@ -136,7 +136,7 @@ function EventsSkeleton() {
 
 export default function EventsPage() {
   return (
-    <MembersOnlyGate demoPath="/events/demo">
+    <MembersOnlyGate>
       <EventsSkeleton />
     </MembersOnlyGate>
   );

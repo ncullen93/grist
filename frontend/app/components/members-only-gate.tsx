@@ -261,10 +261,8 @@ function HistoricHomeIllustration() {
 
 export function MembersOnlyGate({
   children,
-  demoPath,
 }: {
   children: ReactNode;
-  demoPath?: string;
 }) {
   const isLoggedIn = false;
 
@@ -299,7 +297,7 @@ export function MembersOnlyGate({
 
           <div className="mt-7 space-y-2.5">
             <Button size="lg" className="w-full rounded-full" asChild>
-              <Link to={demoPath ?? "#"}>Sign in</Link>
+              <Link to="/login">Sign in</Link>
             </Button>
             <Button
               size="lg"

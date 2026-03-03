@@ -1,5 +1,6 @@
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
 from .filters import ListingFilter
@@ -14,10 +15,15 @@ from .serializers import (
 )
 
 
-class ListingTagViewSet(viewsets.ReadOnlyModelViewSet):
+class ListingTagViewSet(viewsets.ModelViewSet):
     queryset = ListingTag.objects.all()
     serializer_class = ListingTagSerializer
     pagination_class = None
+
+    def get_permissions(self):
+        if self.action in ("create", "update", "partial_update", "destroy"):
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
 
 
 class ListingViewSet(viewsets.ModelViewSet):

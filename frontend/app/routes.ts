@@ -10,13 +10,8 @@ export default [
     index("routes/home.tsx"),
     route("about", "routes/about.tsx"),
     route("community", "routes/community.tsx"),
-    route("community/demo", "routes/community-demo.tsx"),
     route("members", "routes/members-page.tsx"),
-    route("members/demo", "routes/members-demo.tsx"),
-    route("members/demo/:slug", "routes/member-profile-demo.tsx"),
     route("events", "routes/events.tsx"),
-    route("events/demo", "routes/events-demo.tsx"),
-    route("events/demo/:id", "routes/event-detail-demo.tsx"),
   ]),
 
   // Auth
@@ -66,7 +61,15 @@ export default [
 
     // Admin
     route("admin", "routes/admin.tsx"),
+    route("admin/events", "routes/admin-events.tsx"),
     route("admin/events/new", "routes/admin-event-create.tsx"),
     route("admin/events/:id/edit", "routes/admin-event-edit.tsx"),
+    route("admin/members", "routes/admin-members.tsx"),
+    route("admin/blog", "routes/admin-blog.tsx"),
+    route("admin/forum", "routes/admin-forum.tsx"),
+    route("admin/marketplace", "routes/admin-marketplace.tsx"),
+    route("admin/applications", "routes/admin-applications.tsx"),
+    route("admin/support", "routes/admin-support.tsx"),
+    route("admin/analytics", "routes/admin-analytics.tsx"),
   ]),
 ] satisfies RouteConfig;

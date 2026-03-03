@@ -1,5 +1,6 @@
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.notifications.models import Notification
@@ -17,16 +18,26 @@ from .serializers import (
 )
 
 
-class ChannelViewSet(viewsets.ReadOnlyModelViewSet):
+class ChannelViewSet(viewsets.ModelViewSet):
     queryset = Channel.objects.all()
     serializer_class = ChannelSerializer
     pagination_class = None
 
+    def get_permissions(self):
+        if self.action in ("create", "update", "partial_update", "destroy"):
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
 
-class TopicViewSet(viewsets.ReadOnlyModelViewSet):
+
+class TopicViewSet(viewsets.ModelViewSet):
     queryset = Topic.objects.all()
     serializer_class = TopicSerializer
     pagination_class = None
+
+    def get_permissions(self):
+        if self.action in ("create", "update", "partial_update", "destroy"):
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
 
 
 class ForumPostViewSet(viewsets.ModelViewSet):

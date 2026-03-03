@@ -108,7 +108,7 @@ function CommunitySkeleton() {
 
 export default function CommunityPage() {
   return (
-    <MembersOnlyGate demoPath="/community/demo">
+    <MembersOnlyGate>
       <CommunitySkeleton />
     </MembersOnlyGate>
   );

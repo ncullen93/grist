@@ -103,7 +103,7 @@ function MembersSkeleton() {
 
 export default function MembersPage() {
   return (
-    <MembersOnlyGate demoPath="/members/demo">
+    <MembersOnlyGate>
       <MembersSkeleton />
     </MembersOnlyGate>
   );

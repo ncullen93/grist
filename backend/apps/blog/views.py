@@ -19,6 +19,9 @@ class BlogPostViewSet(viewsets.ModelViewSet):
         qs = BlogPost.objects.select_related("author__profile").prefetch_related(
             "comments__author__profile", "likes"
         )
+        # Admin with ?all=true sees everything
+        if self.request.query_params.get("all") and self.request.user.is_staff:
+            return qs
         author_slug = self.request.query_params.get("author")
         if author_slug:
             # Author's own dashboard: show all posts (drafts + published)
