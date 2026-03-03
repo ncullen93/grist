@@ -23,6 +23,9 @@ export default [
   route("login", "routes/login.tsx"),
   route("logout", "routes/logout.tsx"),
 
+  // API proxy
+  route("api/upload", "routes/api.upload.tsx"),
+
   // Signup / onboarding flow
   route("signup", "routes/signup-layout.tsx", [
     index("routes/signup-address.tsx"),

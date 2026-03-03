@@ -36,6 +36,38 @@ export async function apiPost(request: Request, path: string, body?: unknown) {
   });
 }
 
+export async function apiPatch(request: Request, path: string, body: unknown) {
+  return apiFetch(request, path, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+/**
+ * Create a redirect response that forwards Set-Cookie headers from Django.
+ */
+/**
+ * Forward a multipart upload to Django, preserving the boundary.
+ */
+export async function apiUpload(
+  request: Request,
+  path: string,
+  body: ArrayBuffer,
+  contentType: string
+): Promise<Response> {
+  const url = `${API_BASE}${path}`;
+  const cookie = request.headers.get("cookie") || "";
+
+  return fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": contentType,
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    body,
+  });
+}
+
 /**
  * Create a redirect response that forwards Set-Cookie headers from Django.
  */

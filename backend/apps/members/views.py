@@ -1,5 +1,10 @@
-from rest_framework import generics, viewsets
+import uuid
+
+from django.conf import settings
+from django.core.files.storage import default_storage
+from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
 from .filters import MemberProfileFilter
@@ -38,6 +43,17 @@ class MemberProfileViewSet(viewsets.ModelViewSet):
         return Response(
             MemberProfileDetailSerializer(profile, context={"request": request}).data
         )
+
+    @action(detail=False, methods=["post"], url_path="upload", parser_classes=[MultiPartParser])
+    def upload_image(self, request):
+        file = request.FILES.get("file")
+        if not file:
+            return Response({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
+        ext = file.name.rsplit(".", 1)[-1].lower() if "." in file.name else "jpg"
+        filename = f"uploads/{uuid.uuid4().hex}.{ext}"
+        saved = default_storage.save(filename, file)
+        url = f"{settings.MEDIA_URL}{saved}"
+        return Response({"url": url})
 
     @action(detail=True, methods=["post", "delete"])
     def follow(self, request, slug=None):

@@ -42,6 +42,7 @@ interface BlockEditorProps {
   setBlocks: React.Dispatch<React.SetStateAction<Block[]>>;
   placeholder?: string;
   showImages?: boolean;
+  onFileUpload?: (file: File) => Promise<string>;
 }
 
 export function BlockEditor({
@@ -49,6 +50,7 @@ export function BlockEditor({
   setBlocks,
   placeholder = "Start writing...",
   showImages = true,
+  onFileUpload,
 }: BlockEditorProps) {
   const [activeStyle, setActiveStyle] = useState<TextStyle>("normal");
   const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
@@ -267,11 +269,7 @@ export function BlockEditor({
     [blocks, focusTextBlock],
   );
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const preview = URL.createObjectURL(file);
-
+  const insertImageBlock = (preview: string) => {
     const focusedId = activeBlockId.current;
     const cursorPos = activeCursorPos.current;
 
@@ -329,8 +327,19 @@ export function BlockEditor({
 
       return result;
     });
+  };
 
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
     if (fileInputRef.current) fileInputRef.current.value = "";
+
+    if (onFileUpload) {
+      const url = await onFileUpload(file);
+      insertImageBlock(url);
+    } else {
+      insertImageBlock(URL.createObjectURL(file));
+    }
   };
 
   return (

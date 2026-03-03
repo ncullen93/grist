@@ -1,34 +1,94 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { ArrowLeft, Heart, Plus, Check } from "lucide-react";
+import { ArrowLeft, Plus, Check } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import {
-  getMemberBySlug,
-  getMicroPostsByAuthorSlug,
-  allPosts,
-  allEvents,
-} from "~/lib/demo-data";
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "~/components/ui/tabs";
+import { apiGet } from "~/lib/api.server";
+import { redirect } from "react-router";
 import type { Route } from "./+types/member-profile-detail";
 
-export function loader({ params }: Route.LoaderArgs) {
-  const member = getMemberBySlug(params.slug);
-  if (!member) {
-    throw new Response("Member not found", { status: 404 });
+export async function loader({ request, params }: Route.LoaderArgs) {
+  try {
+    const res = await apiGet(request, `/api/members/${params.slug}/`);
+    if (!res.ok) {
+      if (res.status === 404) throw new Response("Member not found", { status: 404 });
+      return redirect("/login");
+    }
+    return { member: await res.json() };
+  } catch (e) {
+    if (e instanceof Response) throw e;
+    return redirect("/login");
   }
-  const microPosts = getMicroPostsByAuthorSlug(params.slug);
-  return { member, microPosts };
+}
+
+/** Render the story field, handling both legacy string[] and Block[] formats. */
+function StoryContent({ story }: { story: unknown[] | null }) {
+  if (!story || story.length === 0) return null;
+
+  // Legacy format: array of strings
+  if (typeof story[0] === "string") {
+    return (
+      <>
+        {(story as string[]).map((paragraph, i) => (
+          <p
+            key={i}
+            className="text-[15px] leading-relaxed text-muted-foreground"
+          >
+            {paragraph}
+          </p>
+        ))}
+      </>
+    );
+  }
+
+  // Block[] format from the editor
+  const styleClasses: Record<string, string> = {
+    normal: "text-[15px] leading-relaxed text-muted-foreground",
+    h1: "text-3xl font-display font-semibold text-foreground pt-6",
+    h2: "text-2xl font-display font-semibold text-foreground pt-4",
+    h3: "text-xl font-display font-semibold text-foreground pt-3",
+    h4: "text-lg font-display font-medium text-foreground pt-2",
+  };
+
+  return (
+    <>
+      {(story as Array<{ type: string; content?: string; style?: string; preview?: string }>).map(
+        (block, i) => {
+          if (block.type === "image" && block.preview) {
+            return (
+              <img
+                key={i}
+                src={block.preview}
+                alt=""
+                className="w-full rounded-xl object-cover"
+              />
+            );
+          }
+          if (block.type === "text" && block.content) {
+            return (
+              <p key={i} className={styleClasses[block.style || "normal"]}>
+                {block.content}
+              </p>
+            );
+          }
+          return null;
+        }
+      )}
+    </>
+  );
 }
 
 export default function MemberProfileDetailPage({
   loaderData,
 }: Route.ComponentProps) {
-  const { member, microPosts } = loaderData;
+  const { member } = loaderData;
   const [activeTab, setActiveTab] = useState("overview");
-  const [isFollowing, setIsFollowing] = useState(false);
-
-  const memberForumPosts = allPosts.filter((p) => p.author === member.name);
-  const memberEvents = allEvents.filter((e) => e.status === "past");
+  const [isFollowing, setIsFollowing] = useState(member.is_following);
 
   return (
     <>
@@ -49,7 +109,9 @@ export default function MemberProfileDetailPage({
               {member.name}
             </h1>
             <p className="mt-3 text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">{member.homeStyle} · {member.homeYear}</span>
+              <span className="font-medium text-foreground">
+                {member.home_style} · {member.home_year}
+              </span>
               {" · "}
               {member.location}
             </p>
@@ -75,16 +137,22 @@ export default function MemberProfileDetailPage({
         </div>
 
         {/* Hero image */}
-        <div className="mt-8 overflow-hidden rounded-xl">
-          <img
-            src={member.photo.replace("w=600&h=600", "w=900&h=500")}
-            alt={member.homeName}
-            className="aspect-video w-full object-cover"
-          />
-        </div>
+        {member.photo && (
+          <div className="mt-8 overflow-hidden rounded-xl">
+            <img
+              src={member.photo.replace("w=600&h=600", "w=900&h=500")}
+              alt={member.home_name}
+              className="aspect-video w-full object-cover"
+            />
+          </div>
+        )}
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-10">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="mt-10"
+        >
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="posts">Posts</TabsTrigger>
@@ -100,7 +168,7 @@ export default function MemberProfileDetailPage({
                     Registry
                   </p>
                   <p className="mt-2 text-sm font-medium text-foreground">
-                    {member.registry}
+                    {member.registry || "—"}
                   </p>
                 </div>
                 <div>
@@ -108,7 +176,7 @@ export default function MemberProfileDetailPage({
                     Home built
                   </p>
                   <p className="mt-2 text-sm font-medium text-foreground">
-                    {member.homeYear}
+                    {member.home_year || "—"}
                   </p>
                 </div>
                 <div>
@@ -116,167 +184,51 @@ export default function MemberProfileDetailPage({
                     Style
                   </p>
                   <p className="mt-2 text-sm font-medium text-foreground">
-                    {member.homeStyle}
+                    {member.home_style || "—"}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Overview */}
+            {/* Overview content */}
             <div className="mt-8">
-              <h2 className="font-display text-2xl font-semibold text-foreground">
-                {member.homeName}
-              </h2>
-              <div className="mt-6 space-y-6">
-                <p className="text-[15px] leading-relaxed text-muted-foreground">
-                  {member.bio}
-                </p>
-
-                {member.story.map((paragraph, i) => (
-                  <p
-                    key={i}
-                    className="text-[15px] leading-relaxed text-muted-foreground"
-                  >
-                    {paragraph}
-                  </p>
-                ))}
-
-                <img
-                  src={member.photo.replace("w=600&h=600", "w=800&h=500")}
-                  alt={member.homeName}
-                  className="aspect-3/2 w-full rounded-xl object-cover"
-                />
+              <div className="space-y-6">
+                <StoryContent story={member.story} />
               </div>
 
-              <div className="mt-6 flex flex-wrap gap-2">
-                {member.tags.map((tag) => (
-                  <Link
-                    key={tag}
-                    to={`/m/members?search=${encodeURIComponent(tag)}`}
-                    className="rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-                  >
-                    {tag}
-                  </Link>
-                ))}
-              </div>
+              {member.tags && member.tags.length > 0 && (
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {member.tags.map((tag: string) => (
+                    <Link
+                      key={tag}
+                      to={`/m/members?search=${encodeURIComponent(tag)}`}
+                      className="rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                    >
+                      {tag}
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           </TabsContent>
 
           <TabsContent value="posts" className="min-h-[70dvh]">
-            <div className="mt-6 space-y-6">
-              {microPosts.length === 0 ? (
-                <div className="rounded-xl border border-border p-16 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    {member.name.split(" ")[0]} hasn&apos;t published any posts
-                    yet.
-                  </p>
-                </div>
-              ) : (
-                microPosts.map((post) => (
-                  <article
-                    key={post.id}
-                    className="rounded-xl border border-border overflow-hidden"
-                  >
-                    {post.image && (
-                      <img
-                        src={post.image}
-                        alt=""
-                        className="aspect-video w-full object-cover"
-                      />
-                    )}
-                    <div className="px-6 py-5">
-                      <p className="text-[15px] leading-relaxed text-muted-foreground">
-                        {post.content}
-                      </p>
-                      <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1.5">
-                          <Heart className="size-4" />
-                          {post.likes}
-                        </span>
-                        <span>{post.time}</span>
-                      </div>
-                    </div>
-                  </article>
-                ))
-              )}
+            <div className="mt-6">
+              <div className="rounded-xl border border-border p-16 text-center">
+                <p className="text-sm text-muted-foreground">
+                  No posts yet.
+                </p>
+              </div>
             </div>
           </TabsContent>
 
           <TabsContent value="activity" className="min-h-[70dvh]">
             <div className="mt-6">
-              {memberForumPosts.length === 0 && memberEvents.length === 0 ? (
-                <div className="rounded-xl border border-border p-16 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    No activity yet.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {memberForumPosts.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                        Forum Posts
-                      </h3>
-                      <div className="mt-4 rounded-xl border border-border overflow-hidden divide-y divide-border">
-                        {memberForumPosts.map((post) => (
-                          <Link
-                            key={post.id}
-                            to="/m/forum"
-                            className="group flex items-center gap-4 px-6 py-5 transition-colors hover:bg-muted/50"
-                          >
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                                {post.title}
-                              </p>
-                              <p className="mt-1 text-sm text-muted-foreground">
-                                {post.likes} likes &middot;{" "}
-                                {post.replies.length} replies
-                              </p>
-                            </div>
-                            <span className="text-xs text-muted-foreground shrink-0">
-                              {post.time}
-                            </span>
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {memberEvents.length > 0 && (
-                    <div className={memberForumPosts.length > 0 ? "mt-8" : ""}>
-                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                        Events Attended
-                      </h3>
-                      <div className="mt-4 rounded-xl border border-border overflow-hidden divide-y divide-border">
-                        {memberEvents.slice(0, 3).map((event) => (
-                          <Link
-                            key={event.id}
-                            to={`/m/events/${event.id}`}
-                            className="group flex items-center gap-4 px-6 py-5 transition-colors hover:bg-muted/50"
-                          >
-                            <img
-                              src={event.image}
-                              alt=""
-                              className="size-10 rounded-lg object-cover shrink-0"
-                            />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                                {event.title}
-                              </p>
-                              <p className="mt-1 text-sm text-muted-foreground">
-                                {event.date}
-                              </p>
-                            </div>
-                            <span className="text-xs text-muted-foreground shrink-0">
-                              {event.type}
-                            </span>
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
+              <div className="rounded-xl border border-border p-16 text-center">
+                <p className="text-sm text-muted-foreground">
+                  No activity yet.
+                </p>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
