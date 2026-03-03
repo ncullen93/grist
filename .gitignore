@@ -1,0 +1,26 @@
+# Dependencies
+frontend/node_modules/
+
+# Build output
+frontend/build/
+
+# Environment
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Vite
+frontend/.vite/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# React Router
+frontend/.react-router/
+
+# Debug logs
+*.log
