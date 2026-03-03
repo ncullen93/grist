@@ -15,6 +15,13 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 
+interface User {
+  id: string;
+  email: string;
+  first_name: string;
+  profile_slug?: string;
+}
+
 const navItems = [
   {
     title: "Home",
@@ -70,9 +77,13 @@ const navItems = [
   },
 ];
 
-export function MemberSidebar() {
+export function MemberSidebar({ user }: { user?: User }) {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const initial = user?.first_name?.charAt(0).toUpperCase() || "G";
+  const displayName = user?.first_name || "Grist Club";
+  const profileUrl = user?.profile_slug ? `/m/members/${user.profile_slug}` : "/m/profile";
 
   const isActive = (item: (typeof navItems)[number]) => {
     if (item.exact) return location.pathname === item.url;
@@ -88,27 +99,27 @@ export function MemberSidebar() {
       {/* Logo */}
       {isCollapsed ? (
         <Link
-          to="/m/members/margaret-h"
+          to={profileUrl}
           className="mt-2 mb-4 shrink-0 flex items-center justify-center"
         >
           <Avatar className="size-8">
             <AvatarFallback className="text-xs font-display font-extrabold bg-primary text-primary-foreground">
-              G
+              {initial}
             </AvatarFallback>
           </Avatar>
         </Link>
       ) : (
         <Link
-          to="/m/members/margaret-h"
+          to={profileUrl}
           className="mt-2 mb-4 px-2.5 py-2 rounded-lg border border-border flex items-center gap-3"
         >
           <Avatar className="size-6 shrink-0">
             <AvatarFallback className="text-[10px] font-display font-extrabold bg-primary text-primary-foreground rounded-sm">
-              G
+              {initial}
             </AvatarFallback>
           </Avatar>
           <span className="text-sm font-display font-extrabold truncate">
-            Grist Club
+            {displayName}
           </span>
         </Link>
       )}

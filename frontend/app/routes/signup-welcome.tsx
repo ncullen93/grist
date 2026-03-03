@@ -28,17 +28,12 @@ export default function SignupWelcome() {
         </ol>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <Button
-          asChild
-          className="h-12 w-full rounded-lg bg-primary text-sm font-medium"
-        >
-          <Link to="/m">Go to dashboard</Link>
-        </Button>
-        <p className="text-center text-xs text-gray-400">
-          Demo mode — no account was actually created
-        </p>
-      </div>
+      <Button
+        asChild
+        className="h-12 w-full rounded-lg bg-primary text-sm font-medium"
+      >
+        <Link to="/m">Go to dashboard</Link>
+      </Button>
     </>
   );
 }

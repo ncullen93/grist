@@ -1,5 +1,8 @@
 import { useState, useRef, useLayoutEffect } from "react";
-import { Outlet, Link, useLocation } from "react-router";
+import { Outlet, Form, useLocation } from "react-router";
+import type { Route } from "./+types/member-layout";
+import { apiGet } from "~/lib/api.server";
+import { redirect } from "react-router";
 import { MemberSidebar } from "~/components/member-sidebar";
 import { MemberMobileNav } from "~/components/member-mobile-nav";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
@@ -12,7 +15,21 @@ import { LogOut } from "lucide-react";
 import { HelpDialog } from "~/components/help-dialog";
 import { NotificationPanel } from "~/components/notification-panel";
 
-export default function MemberLayout() {
+export async function loader({ request }: Route.LoaderArgs) {
+  try {
+    const res = await apiGet(request, "/api/auth/me/");
+    if (!res.ok) {
+      return redirect("/login");
+    }
+    const user = await res.json();
+    return { user };
+  } catch {
+    return redirect("/login");
+  }
+}
+
+export default function MemberLayout({ loaderData }: Route.ComponentProps) {
+  const { user } = loaderData;
   const [avatarPopoverOpen, setAvatarPopoverOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
@@ -21,11 +38,13 @@ export default function MemberLayout() {
     scrollRef.current?.scrollTo(0, 0);
   }, [pathname]);
 
+  const initial = user.first_name?.charAt(0).toUpperCase() || "G";
+
   return (
     <div className="flex h-screen overflow-hidden bg-background md:bg-sidebar">
       {/* Desktop sidebar - hidden on mobile */}
       <div className="hidden md:block">
-        <MemberSidebar />
+        <MemberSidebar user={user} />
       </div>
 
       {/* Main content area */}
@@ -49,7 +68,7 @@ export default function MemberLayout() {
                       <button className="cursor-pointer flex items-center justify-center rounded-full transition-colors">
                         <Avatar>
                           <AvatarFallback className="text-sm font-medium bg-primary text-primary-foreground">
-                            G
+                            {initial}
                           </AvatarFallback>
                         </Avatar>
                       </button>
@@ -60,14 +79,16 @@ export default function MemberLayout() {
                       className="w-48 rounded p-1.5"
                     >
                       <div className="flex flex-col">
-                        <Link
-                          to="/"
-                          className="flex items-center gap-3 px-3 py-2.5 text-sm text-destructive rounded hover:bg-destructive/10 transition-colors"
-                          onClick={() => setAvatarPopoverOpen(false)}
-                        >
-                          <LogOut className="size-4" />
-                          Log out
-                        </Link>
+                        <Form method="post" action="/logout">
+                          <button
+                            type="submit"
+                            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-destructive rounded hover:bg-destructive/10 transition-colors cursor-pointer"
+                            onClick={() => setAvatarPopoverOpen(false)}
+                          >
+                            <LogOut className="size-4" />
+                            Log out
+                          </button>
+                        </Form>
                       </div>
                     </PopoverContent>
                   </Popover>

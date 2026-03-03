@@ -1,10 +1,41 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { Form, useNavigation } from "react-router";
+import type { Route } from "./+types/signup-address";
+import { apiPost } from "~/lib/api.server";
+import { redirect } from "react-router";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 
-export default function SignupAddress() {
-  const navigate = useNavigate();
+export async function action({ request }: Route.ActionArgs) {
+  const formData = await request.formData();
+  const code = ((formData.get("code") as string) || "").trim();
+  const address = ((formData.get("address") as string) || "").trim();
+
+  if (address && !code) {
+    return redirect("/signup/apply");
+  }
+
+  if (!code) {
+    return { error: "Please enter an activation code or address." };
+  }
+
+  try {
+    const res = await apiPost(request, "/api/auth/validate-code/", { code });
+    const data = await res.json();
+
+    if (!data.valid) {
+      return { error: "Invalid or expired activation code." };
+    }
+
+    return redirect(`/signup/account?code=${encodeURIComponent(code)}`);
+  } catch {
+    return { error: "Unable to connect to server. Please try again." };
+  }
+}
+
+export default function SignupAddress({ actionData }: Route.ComponentProps) {
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting";
   const [address, setAddress] = useState("");
   const [code, setCode] = useState("");
 
@@ -12,17 +43,15 @@ export default function SignupAddress() {
   const hasCode = code.trim().length > 0;
   const canContinue = hasAddress || hasCode;
 
-  function handleContinue() {
-    if (hasCode) {
-      navigate("/signup/account");
-    } else {
-      navigate("/signup/apply");
-    }
-  }
-
   return (
-    <>
+    <Form method="post" className="flex flex-col gap-9">
       <div className="space-y-5">
+        {actionData?.error && (
+          <div className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {actionData.error}
+          </div>
+        )}
+
         <div>
           <label
             htmlFor="address"
@@ -32,6 +61,7 @@ export default function SignupAddress() {
           </label>
           <Input
             id="address"
+            name="address"
             type="text"
             placeholder="123 Main St, Brewster, MA"
             value={address}
@@ -61,6 +91,7 @@ export default function SignupAddress() {
           </label>
           <Input
             id="code"
+            name="code"
             type="text"
             placeholder="GRIST-XXXX-XXXX"
             value={code}
@@ -74,12 +105,12 @@ export default function SignupAddress() {
       </div>
 
       <Button
-        onClick={handleContinue}
-        disabled={!canContinue}
+        type="submit"
+        disabled={!canContinue || isSubmitting}
         className="h-12 w-full rounded-lg bg-primary text-sm font-medium"
       >
-        Continue
+        {isSubmitting ? "Checking..." : "Continue"}
       </Button>
-    </>
+    </Form>
   );
 }
