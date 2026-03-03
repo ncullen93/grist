@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import { Button } from "~/components/ui/button";
 
-export default function SignupWelcome() {
+export default function SignupSubmitted() {
   return (
     <>
       <div className="rounded-xl border border-gray-200 bg-white p-5">
@@ -11,19 +11,19 @@ export default function SignupWelcome() {
             <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
               1
             </span>
-            Your account has been created.
+            We verify your address against historic registries.
           </li>
           <li className="flex items-start gap-3 text-[15px] text-gray-600">
             <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
               2
             </span>
-            Browse the forum, events, and directory.
+            We'll reach out if we have any questions.
           </li>
           <li className="flex items-start gap-3 text-[15px] text-gray-600">
             <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
               3
             </span>
-            Set up your profile whenever you're ready.
+            Once approved, you'll receive an invite.
           </li>
         </ol>
       </div>
@@ -33,10 +33,10 @@ export default function SignupWelcome() {
           asChild
           className="h-12 w-full rounded-lg bg-primary text-sm font-medium"
         >
-          <Link to="/m">Go to dashboard</Link>
+          <Link to="/">Back to home</Link>
         </Button>
         <p className="text-center text-xs text-gray-400">
-          Demo mode — no account was actually created
+          Demo mode — no application was actually submitted
         </p>
       </div>
     </>

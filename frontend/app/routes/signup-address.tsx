@@ -8,7 +8,17 @@ export default function SignupAddress() {
   const [address, setAddress] = useState("");
   const [code, setCode] = useState("");
 
-  const canContinue = address.trim().length > 0 || code.trim().length > 0;
+  const hasAddress = address.trim().length > 0;
+  const hasCode = code.trim().length > 0;
+  const canContinue = hasAddress || hasCode;
+
+  function handleContinue() {
+    if (hasCode) {
+      navigate("/signup/account");
+    } else {
+      navigate("/signup/apply");
+    }
+  }
 
   return (
     <>
@@ -64,7 +74,7 @@ export default function SignupAddress() {
       </div>
 
       <Button
-        onClick={() => navigate("/signup/account")}
+        onClick={handleContinue}
         disabled={!canContinue}
         className="h-12 w-full rounded-lg bg-primary text-sm font-medium"
       >

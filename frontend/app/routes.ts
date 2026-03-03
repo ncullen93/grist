@@ -24,6 +24,8 @@ export default [
     index("routes/signup-address.tsx"),
     route("account", "routes/signup-account.tsx"),
     route("welcome", "routes/signup-welcome.tsx"),
+    route("apply", "routes/signup-apply.tsx"),
+    route("submitted", "routes/signup-submitted.tsx"),
   ]),
 
   // Member dashboard (sidebar layout)

@@ -42,7 +42,7 @@ export function UpcomingEvents() {
         Events
       </p>
       <h2 className="mt-3 font-display text-3xl font-medium tracking-tight text-gray-900 sm:text-4xl">
-        What we&rsquo;re planning for members
+        Get to know your fellow members
       </h2>
 
       <div className="mt-16 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">

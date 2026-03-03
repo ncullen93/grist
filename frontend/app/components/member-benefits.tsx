@@ -120,9 +120,7 @@ function CommunityMockup() {
               className="size-5 rounded-full object-cover ring-1 ring-white"
             />
           </div>
-          <p className="text-[9px] text-gray-500">
-            14 members online now
-          </p>
+          <p className="text-[9px] text-gray-500">14 members online now</p>
         </div>
       </div>
     </div>
@@ -236,7 +234,7 @@ export function MemberBenefits() {
               Why Grist Club
             </p>
             <h2 className="mt-3 font-display text-3xl font-medium tracking-tight text-gray-900 sm:text-4xl">
-              The knowledge base that doesn&rsquo;t exist anywhere else
+              A community that shares your passion
             </h2>
           </div>
 
