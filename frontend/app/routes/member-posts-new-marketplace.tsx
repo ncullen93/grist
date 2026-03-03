@@ -36,10 +36,13 @@ export default function MemberPostsNewMarketplacePage() {
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const preview = URL.createObjectURL(file);
-    setImages((prev) => [...prev, { id: ++nextId.current, preview }]);
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const newImages = Array.from(files).map((file) => ({
+      id: ++nextId.current,
+      preview: URL.createObjectURL(file),
+    }));
+    setImages((prev) => [...prev, ...newImages]);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -56,6 +59,7 @@ export default function MemberPostsNewMarketplacePage() {
           ref={fileInputRef}
           type="file"
           accept="image/*"
+          multiple
           className="hidden"
           onChange={handleImageSelect}
         />
