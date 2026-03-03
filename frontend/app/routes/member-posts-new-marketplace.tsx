@@ -1,9 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import { Plus, X } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { PageHeader } from "~/components/page-header";
+import { BlockEditor, newBlockId } from "~/components/block-editor";
+import type { Block } from "~/components/block-editor";
 import type { ListingCategory } from "~/lib/demo-data";
 
 const categories: { label: string; value: ListingCategory }[] = [
@@ -12,47 +14,21 @@ const categories: { label: string; value: ListingCategory }[] = [
   { label: "Free", value: "free" },
 ];
 
-function AutoGrowTextarea({
-  value,
-  onChange,
-  placeholder,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-}) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (ref.current) {
-      ref.current.style.height = "auto";
-      ref.current.style.height = Math.max(ref.current.scrollHeight, 160) + "px";
-    }
-  }, [value]);
-
-  return (
-    <textarea
-      ref={ref}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      rows={1}
-      className="w-full min-h-40 resize-none border-0 bg-transparent px-0 py-0 text-base leading-relaxed outline-none placeholder:text-muted-foreground"
-    />
-  );
-}
-
 export default function MemberPostsNewMarketplacePage() {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [category, setCategory] = useState<ListingCategory>("for-sale");
   const [price, setPrice] = useState("");
+  const [blocks, setBlocks] = useState<Block[]>([
+    { id: newBlockId(), type: "text", content: "", style: "normal" },
+  ]);
   const [images, setImages] = useState<{ id: number; preview: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(0);
 
-  const hasContent = title.trim() !== "" && description.trim() !== "";
+  const hasContent =
+    title.trim() !== "" &&
+    blocks.some((b) => b.type === "text" && b.content.trim() !== "");
 
   const handlePublish = () => {
     if (!hasContent) return;
@@ -172,11 +148,12 @@ export default function MemberPostsNewMarketplacePage() {
         </div>
 
         {/* Content card */}
-        <div className="mt-4 rounded-xl border border-border bg-background p-6">
-          <AutoGrowTextarea
-            value={description}
-            onChange={setDescription}
+        <div className="mt-4">
+          <BlockEditor
+            blocks={blocks}
+            setBlocks={setBlocks}
             placeholder="Describe your item..."
+            showImages={false}
           />
         </div>
       </div>
