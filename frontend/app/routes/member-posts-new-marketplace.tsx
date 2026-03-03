@@ -1,12 +1,16 @@
-import { useState, useRef } from "react";
-import { useNavigate } from "react-router";
-import { ImagePlus, X } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { useFetcher } from "react-router";
+import { redirect } from "react-router";
+import type { Route } from "./+types/member-posts-new-marketplace";
+import { apiGet, apiPost, apiUpload } from "~/lib/api.server";
+import { ImagePlus, X, Loader2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { PageHeader } from "~/components/page-header";
 import { BlockEditor, newBlockId } from "~/components/block-editor";
 import type { Block } from "~/components/block-editor";
-import type { ListingCategory } from "~/lib/demo-data";
+
+type ListingCategory = "for-sale" | "wanted" | "free";
 
 const categories: { label: string; value: ListingCategory }[] = [
   { label: "For Sale", value: "for-sale" },
@@ -14,17 +18,139 @@ const categories: { label: string; value: ListingCategory }[] = [
   { label: "Free", value: "free" },
 ];
 
-export default function MemberPostsNewMarketplacePage() {
-  const navigate = useNavigate();
+export async function loader({ request }: Route.LoaderArgs) {
+  try {
+    const res = await apiGet(request, "/api/members/me/");
+    if (!res.ok) return redirect("/login");
+    const profile = await res.json();
+    return { name: profile.name, location: profile.location };
+  } catch {
+    return redirect("/login");
+  }
+}
+
+export async function action({ request }: Route.ActionArgs) {
+  const contentType = request.headers.get("content-type") || "";
+
+  // Image upload — forward multipart to Django
+  if (contentType.includes("multipart/form-data")) {
+    try {
+      const body = await request.arrayBuffer();
+      const res = await apiUpload(
+        request,
+        "/api/members/upload/",
+        body,
+        contentType
+      );
+      if (!res.ok) return { error: "Upload failed" };
+      const data = await res.json();
+      return { url: data.url };
+    } catch {
+      return { error: "Upload failed" };
+    }
+  }
+
+  // Create marketplace listing
+  const formData = await request.formData();
+  const title = formData.get("title") as string;
+  const description = formData.get("description") as string;
+  const category = formData.get("category") as string;
+  const price = (formData.get("price") as string) || "";
+  const image = (formData.get("image") as string) || "";
+
+  try {
+    const res = await apiPost(request, "/api/marketplace/listings/", {
+      title,
+      description,
+      category,
+      price,
+      image,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      return { error: err.detail || "Failed to create listing." };
+    }
+    return redirect("/m/posts");
+  } catch {
+    return { error: "Unable to connect to server." };
+  }
+}
+
+export default function MemberPostsNewMarketplacePage({
+  loaderData,
+}: Route.ComponentProps) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<ListingCategory>("for-sale");
   const [price, setPrice] = useState("");
   const [blocks, setBlocks] = useState<Block[]>([
     { id: newBlockId(), type: "text", content: "", style: "normal" },
   ]);
-  const [images, setImages] = useState<{ id: number; preview: string }[]>([]);
+  const [images, setImages] = useState<
+    { id: number; preview: string; uploaded?: boolean }[]
+  >([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(0);
+  const publishFetcher = useFetcher();
+  const uploadFetcher = useFetcher();
+  const isPublishing = publishFetcher.state === "submitting";
+
+  // Promise resolve ref for the async gallery image upload
+  const pendingResolve = useRef<
+    ((url: string) => void) | null
+  >(null);
+
+  useEffect(() => {
+    if (
+      uploadFetcher.state === "idle" &&
+      uploadFetcher.data?.url &&
+      pendingResolve.current
+    ) {
+      pendingResolve.current(uploadFetcher.data.url);
+      pendingResolve.current = null;
+    }
+  }, [uploadFetcher.state, uploadFetcher.data]);
+
+  const uploadFile = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      pendingResolve.current = resolve;
+      const formData = new FormData();
+      formData.append("file", file);
+      uploadFetcher.submit(formData, {
+        method: "post",
+        encType: "multipart/form-data",
+      });
+    });
+  };
+
+  const isUploading = uploadFetcher.state !== "idle";
+
+  const handleImageSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
+    for (const file of Array.from(files)) {
+      const localId = ++nextId.current;
+      const localPreview = URL.createObjectURL(file);
+      setImages((prev) => [...prev, { id: localId, preview: localPreview }]);
+
+      // Upload and replace preview with real URL
+      const url = await uploadFile(file);
+      setImages((prev) =>
+        prev.map((img) =>
+          img.id === localId
+            ? { ...img, preview: url, uploaded: true }
+            : img,
+        ),
+      );
+    }
+  };
+
+  const removeImage = (id: number) => {
+    setImages((prev) => prev.filter((img) => img.id !== id));
+  };
 
   const hasContent =
     title.trim() !== "" &&
@@ -32,22 +158,31 @@ export default function MemberPostsNewMarketplacePage() {
 
   const handlePublish = () => {
     if (!hasContent) return;
-    navigate("/m/posts");
-  };
+    const cleanBlocks = blocks
+      .filter(
+        (b) =>
+          b.type === "image" || b.content.trim() !== "" || blocks.length === 1,
+      )
+      .map((b) => {
+        if (b.type === "text") {
+          return { type: b.type, style: b.style, content: b.content };
+        }
+        return { type: b.type, preview: b.preview };
+      });
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const newImages = Array.from(files).map((file) => ({
-      id: ++nextId.current,
-      preview: URL.createObjectURL(file),
-    }));
-    setImages((prev) => [...prev, ...newImages]);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
+    // Use the first uploaded image as the listing image
+    const mainImage = images.find((img) => img.uploaded)?.preview || "";
 
-  const removeImage = (id: number) => {
-    setImages((prev) => prev.filter((img) => img.id !== id));
+    publishFetcher.submit(
+      {
+        title,
+        description: JSON.stringify(cleanBlocks),
+        category,
+        price: category === "for-sale" ? price : "",
+        image: mainImage,
+      },
+      { method: "post" },
+    );
   };
 
   return (
@@ -78,14 +213,19 @@ export default function MemberPostsNewMarketplacePage() {
             <Button
               className="rounded-full px-8 shrink-0"
               onClick={handlePublish}
-              disabled={!hasContent}
+              disabled={!hasContent || isPublishing || isUploading}
             >
-              Publish
+              {isPublishing ? "Publishing..." : "Publish"}
             </Button>
           </div>
           <p className="mt-3 text-sm text-muted-foreground">
-            By Margaret H. &middot; Savannah, GA
+            By {loaderData.name} &middot; {loaderData.location}
           </p>
+          {publishFetcher.data?.error && (
+            <p className="mt-2 text-sm text-destructive">
+              {publishFetcher.data.error}
+            </p>
+          )}
         </div>
 
         {/* Category + Price */}
@@ -119,7 +259,7 @@ export default function MemberPostsNewMarketplacePage() {
         </div>
 
         {/* Photos card */}
-        <div className="mt-4 rounded-xl bg-background ">
+        <div className="mt-4 rounded-xl bg-background">
           <div className="grid grid-cols-4 gap-3">
             {images.map((img) => (
               <div
@@ -131,6 +271,11 @@ export default function MemberPostsNewMarketplacePage() {
                   alt=""
                   className="size-full object-cover"
                 />
+                {!img.uploaded && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <Loader2 className="size-5 text-white animate-spin" />
+                  </div>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"

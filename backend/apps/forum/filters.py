@@ -8,10 +8,11 @@ class ForumPostFilter(django_filters.FilterSet):
     channel = django_filters.CharFilter(field_name="channel__slug")
     topic = django_filters.CharFilter(method="topic_filter")
     search = django_filters.CharFilter(method="search_filter")
+    author = django_filters.CharFilter(field_name="author__profile__slug")
 
     class Meta:
         model = ForumPost
-        fields = ["channel"]
+        fields = ["channel", "author"]
 
     def topic_filter(self, queryset, name, value):
         return queryset.filter(topics__slug=value)

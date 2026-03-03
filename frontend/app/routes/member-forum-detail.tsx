@@ -1,47 +1,179 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useFetcher } from "react-router";
+import { redirect } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { getPostById, allMembers, allPosts } from "~/lib/demo-data";
-import type { Post, Reply } from "~/lib/demo-data";
+import { apiGet, apiPost } from "~/lib/api.server";
 import type { Route } from "./+types/member-forum-detail";
 
-const memberSlugMap = new Map(allMembers.map((m) => [m.name, m.slug]));
+interface ForumReply {
+  id: number;
+  author_slug: string;
+  author_name: string;
+  location: string;
+  home_photo: string;
+  body: string;
+  time: string;
+}
 
-export function loader({ params }: Route.LoaderArgs) {
-  const post = getPostById(Number(params.id));
-  if (!post) {
-    throw new Response("Post not found", { status: 404 });
+interface ForumPost {
+  id: number;
+  author_slug: string;
+  author_name: string;
+  location: string;
+  home_photo: string;
+  channel_name: string;
+  channel_slug: string;
+  topic_names: string[];
+  title: string;
+  body: string;
+  image: string;
+  pinned: boolean;
+  likes_count: number;
+  reply_count: number;
+  time: string;
+  replies: ForumReply[];
+  user_has_liked: boolean;
+}
+
+interface CurrentUser {
+  name: string;
+  photo: string;
+  location: string;
+}
+
+export async function loader({ request, params }: Route.LoaderArgs) {
+  try {
+    const [postRes, profileRes] = await Promise.all([
+      apiGet(request, `/api/forum/posts/${params.id}/`),
+      apiGet(request, "/api/members/me/"),
+    ]);
+    if (!postRes.ok) {
+      throw new Response("Post not found", { status: 404 });
+    }
+    if (!profileRes.ok) return redirect("/login");
+    const post: ForumPost = await postRes.json();
+    const profile = await profileRes.json();
+    const currentUser: CurrentUser = {
+      name: profile.name,
+      photo: profile.photo,
+      location: profile.location,
+    };
+    return { post, currentUser };
+  } catch (e) {
+    if (e instanceof Response) throw e;
+    return redirect("/login");
   }
-  return { post };
+}
+
+export async function action({ request, params }: Route.ActionArgs) {
+  const formData = await request.formData();
+  const intent = formData.get("intent") as string;
+
+  if (intent === "reply") {
+    const body = formData.get("body") as string;
+    const res = await apiPost(request, `/api/forum/posts/${params.id}/reply/`, {
+      body,
+    });
+    if (!res.ok) return { error: "Failed to post reply." };
+    const reply = await res.json();
+    return { newReply: reply };
+  }
+
+  if (intent === "like") {
+    const res = await apiPost(request, `/api/forum/posts/${params.id}/like/`);
+    if (!res.ok) return { error: "Failed to like." };
+    const data = await res.json();
+    return { liked: data.liked, likesCount: data.count };
+  }
+
+  return { error: "Unknown action" };
+}
+
+/**
+ * Render content that may be JSON blocks or plain text.
+ */
+function RenderContent({ content }: { content: string }) {
+  try {
+    const blocks = JSON.parse(content);
+    if (Array.isArray(blocks)) {
+      return (
+        <>
+          {blocks.map((block: { type: string; style?: string; content?: string; preview?: string }, i: number) => {
+            if (block.type === "image" && block.preview) {
+              return (
+                <div key={i} className="my-6 overflow-hidden rounded-xl">
+                  <img src={block.preview} alt="" className="w-full object-cover" />
+                </div>
+              );
+            }
+            if (block.type === "text") {
+              if (!block.content?.trim()) return null;
+              const style = block.style || "normal";
+              const className =
+                style === "h1"
+                  ? "mt-8 mb-2 font-display text-3xl font-semibold"
+                  : style === "h2"
+                    ? "mt-6 mb-1.5 font-display text-2xl font-semibold"
+                    : style === "h3"
+                      ? "mt-5 mb-1 font-display text-xl font-semibold"
+                      : style === "h4"
+                        ? "mt-4 mb-1 font-display text-lg font-medium"
+                        : "text-[15px] leading-relaxed text-muted-foreground";
+              return (
+                <p key={i} className={className}>
+                  {block.content}
+                </p>
+              );
+            }
+            return null;
+          })}
+        </>
+      );
+    }
+  } catch {
+    // Not JSON — fall through to plain text
+  }
+  return <p className="text-[15px] leading-relaxed text-muted-foreground whitespace-pre-wrap">{content}</p>;
 }
 
 export default function MemberForumDetailPage({
   loaderData,
 }: Route.ComponentProps) {
-  const [post, setPost] = useState<Post>(loaderData.post);
+  const { currentUser } = loaderData;
+  const [post] = useState(loaderData.post);
   const [replyText, setReplyText] = useState("");
+  const replyFetcher = useFetcher();
+  const likeFetcher = useFetcher();
+  const isReplying = replyFetcher.state === "submitting";
+
+  // Append new reply when it comes back
+  const displayReplies = [...(post.replies || [])];
+  if (replyFetcher.data?.newReply) {
+    const nr = replyFetcher.data.newReply;
+    if (!displayReplies.some((r: ForumReply) => r.id === nr.id)) {
+      displayReplies.push(nr);
+    }
+  }
 
   const handleReply = () => {
     if (!replyText.trim()) return;
-    const newReply: Reply = {
-      id: Date.now(),
-      author: "You",
-      location: "Brewster, MA",
-      homePhoto:
-        "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=80&h=80&fit=crop&crop=center",
-      time: "Just now",
-      body: replyText.trim(),
-    };
-    setPost((prev) => ({ ...prev, replies: [...prev.replies, newReply] }));
+    replyFetcher.submit(
+      { intent: "reply", body: replyText.trim() },
+      { method: "post" },
+    );
     setReplyText("");
   };
 
-  const handleLike = () => {
-    setPost((prev) => ({ ...prev, likes: prev.likes + 1 }));
-  };
+  // Optimistic like state
+  const pendingLike = likeFetcher.state !== "idle";
+  const likeResult = likeFetcher.data;
+  const liked = likeResult?.liked ?? post.user_has_liked;
+  const likesCount = likeResult?.likesCount ?? post.likes_count;
 
-  const authorSlug = memberSlugMap.get(post.author);
+  const handleLike = () => {
+    likeFetcher.submit({ intent: "like" }, { method: "post" });
+  };
 
   return (
     <>
@@ -64,13 +196,7 @@ export default function MemberForumDetailPage({
               </span>
             )}
             <span className="text-xs text-muted-foreground">
-              {post.channel === "general"
-                ? "General"
-                : post.channel
-                    .split("-")
-                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                    .join(" ")}
-              {" "}&middot; {post.time}
+              {post.channel_name} &middot; {post.time}
             </span>
           </div>
 
@@ -80,34 +206,20 @@ export default function MemberForumDetailPage({
 
           <div className="mt-5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {authorSlug ? (
-                <Link to={`/m/members/${authorSlug}`}>
-                  <img
-                    src={post.homePhoto}
-                    alt=""
-                    className="size-9 rounded-full object-cover"
-                  />
-                </Link>
-              ) : (
+              <Link to={`/m/members/${post.author_slug}`}>
                 <img
-                  src={post.homePhoto}
+                  src={post.home_photo}
                   alt=""
                   className="size-9 rounded-full object-cover"
                 />
-              )}
+              </Link>
               <div>
-                {authorSlug ? (
-                  <Link
-                    to={`/m/members/${authorSlug}`}
-                    className="text-sm font-semibold text-foreground hover:text-primary transition-colors"
-                  >
-                    {post.author}
-                  </Link>
-                ) : (
-                  <p className="text-sm font-semibold text-foreground">
-                    {post.author}
-                  </p>
-                )}
+                <Link
+                  to={`/m/members/${post.author_slug}`}
+                  className="text-sm font-semibold text-foreground hover:text-primary transition-colors"
+                >
+                  {post.author_name}
+                </Link>
                 <p className="text-xs text-muted-foreground">
                   {post.location}
                 </p>
@@ -117,11 +229,12 @@ export default function MemberForumDetailPage({
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
               <button
                 onClick={handleLike}
-                className="transition-colors hover:text-foreground"
+                disabled={pendingLike}
+                className={`transition-colors hover:text-foreground ${liked ? "text-primary" : ""}`}
               >
-                {post.likes} likes
+                {likesCount} likes
               </button>
-              <span>{post.replies.length} replies</span>
+              <span>{displayReplies.length} replies</span>
             </div>
           </div>
         </div>
@@ -130,19 +243,17 @@ export default function MemberForumDetailPage({
         <div className="mt-8 border-t border-border pt-8">
           {post.image && (
             <img
-              src={post.image.replace(/w=\d+&h=\d+/, "w=900&h=500")}
+              src={post.image}
               alt=""
               className="w-full rounded-xl object-cover aspect-video mb-6"
             />
           )}
 
-          <p className="text-[15px] leading-relaxed text-muted-foreground">
-            {post.body}
-          </p>
+          <RenderContent content={post.body} />
 
-          {post.topics.length > 0 && (
+          {(post.topic_names?.length ?? 0) > 0 && (
             <div className="mt-5 flex flex-wrap gap-2">
-              {post.topics.map((t) => (
+              {post.topic_names.map((t: string) => (
                 <span
                   key={t}
                   className="rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground"
@@ -160,56 +271,39 @@ export default function MemberForumDetailPage({
             Replies
           </h2>
 
-          {post.replies.length === 0 ? (
+          {displayReplies.length === 0 ? (
             <p className="mt-4 text-sm text-muted-foreground">
               No replies yet. Be the first to respond.
             </p>
           ) : (
             <div className="mt-6 rounded-xl border border-border overflow-hidden divide-y divide-border">
-              {post.replies.map((reply) => {
-                const replySlug = memberSlugMap.get(reply.author);
-                return (
-                  <div key={reply.id} className="px-6 py-5">
-                    <div className="flex items-center gap-3">
-                      {replySlug ? (
-                        <Link to={`/m/members/${replySlug}`}>
-                          <img
-                            src={reply.homePhoto}
-                            alt=""
-                            className="size-9 rounded-full object-cover"
-                          />
-                        </Link>
-                      ) : (
-                        <img
-                          src={reply.homePhoto}
-                          alt=""
-                          className="size-9 rounded-full object-cover"
-                        />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        {replySlug ? (
-                          <Link
-                            to={`/m/members/${replySlug}`}
-                            className="text-sm font-semibold text-foreground hover:text-primary transition-colors"
-                          >
-                            {reply.author}
-                          </Link>
-                        ) : (
-                          <p className="text-sm font-semibold text-foreground">
-                            {reply.author}
-                          </p>
-                        )}
-                        <p className="text-xs text-muted-foreground">
-                          {reply.location} &middot; {reply.time}
-                        </p>
-                      </div>
+              {displayReplies.map((reply: ForumReply) => (
+                <div key={reply.id} className="px-6 py-5">
+                  <div className="flex items-center gap-3">
+                    <Link to={`/m/members/${reply.author_slug}`}>
+                      <img
+                        src={reply.home_photo}
+                        alt=""
+                        className="size-9 rounded-full object-cover"
+                      />
+                    </Link>
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        to={`/m/members/${reply.author_slug}`}
+                        className="text-sm font-semibold text-foreground hover:text-primary transition-colors"
+                      >
+                        {reply.author_name}
+                      </Link>
+                      <p className="text-xs text-muted-foreground">
+                        {reply.location} &middot; {reply.time}
+                      </p>
                     </div>
-                    <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
-                      {reply.body}
-                    </p>
                   </div>
-                );
-              })}
+                  <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
+                    {reply.body}
+                  </p>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -217,12 +311,16 @@ export default function MemberForumDetailPage({
         {/* Reply input */}
         <div className="mt-8 rounded-xl border border-border p-6">
           <div className="flex items-center gap-3">
-            <img
-              src="https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=80&h=80&fit=crop&crop=center"
-              alt=""
-              className="size-9 rounded-full object-cover shrink-0"
-            />
-            <p className="text-sm font-semibold text-foreground">You</p>
+            {currentUser.photo && (
+              <img
+                src={currentUser.photo}
+                alt=""
+                className="size-9 rounded-full object-cover shrink-0"
+              />
+            )}
+            <p className="text-sm font-semibold text-foreground">
+              {currentUser.name}
+            </p>
           </div>
           <textarea
             value={replyText}
@@ -236,51 +334,12 @@ export default function MemberForumDetailPage({
               size="sm"
               className="rounded-full px-6"
               onClick={handleReply}
-              disabled={!replyText.trim()}
+              disabled={!replyText.trim() || isReplying}
             >
-              Reply
+              {isReplying ? "Posting..." : "Reply"}
             </Button>
           </div>
         </div>
-
-        {/* More posts */}
-        {(() => {
-          const related = allPosts
-            .filter((p) => p.id !== post.id)
-            .slice(0, 3);
-          if (related.length === 0) return null;
-          return (
-            <div className="mt-12">
-              <h2 className="font-display text-2xl font-semibold text-foreground">
-                More from the Forum
-              </h2>
-              <div className="mt-6 space-y-4">
-                {related.map((p) => (
-                  <Link
-                    key={p.id}
-                    to={`/m/forum/${p.id}`}
-                    className="group flex items-center gap-4 rounded-xl border border-border px-6 py-5 transition-colors hover:bg-muted/30"
-                  >
-                    <img
-                      src={p.homePhoto}
-                      alt=""
-                      className="size-9 rounded-full object-cover shrink-0"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-display text-base font-semibold text-foreground group-hover:text-primary transition-colors">
-                        {p.title}
-                      </p>
-                      <p className="mt-0.5 text-sm text-muted-foreground">
-                        {p.author} &middot; {p.likes} likes &middot;{" "}
-                        {p.replies.length} replies
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
       </div>
     </>
   );

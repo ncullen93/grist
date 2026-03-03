@@ -1,5 +1,8 @@
-import { useState, useMemo } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { useMemo } from "react";
+import { Link, useNavigate, useSearchParams, useFetcher } from "react-router";
+import { redirect } from "react-router";
+import type { Route } from "./+types/member-feed";
+import { apiGet, apiDelete } from "~/lib/api.server";
 import {
   Heart,
   Share2,
@@ -22,37 +25,103 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import { PageHeader } from "~/components/page-header";
-import {
-  allMicroPosts,
-  allPosts as allForumPosts,
-  allListings,
-  allChannels,
-} from "~/lib/demo-data";
-import type { MicroPost, Post, Listing } from "~/lib/demo-data";
 
-const mySlug = "margaret-h";
+// API response types
+interface BlogPostItem {
+  id: number;
+  title: string;
+  image: string;
+  likes_count: number;
+  comment_count: number;
+  time: string;
+  created_at: string;
+}
+
+interface ForumPostItem {
+  id: number;
+  title: string;
+  image: string;
+  likes_count: number;
+  reply_count: number;
+  time: string;
+  created_at: string;
+}
+
+interface ListingItem {
+  id: number;
+  title: string;
+  image: string;
+  category: string;
+  price: string;
+  likes_count: number;
+  reply_count: number;
+  time: string;
+  created_at: string;
+}
 
 type UnifiedPost =
-  | { type: "blog"; data: MicroPost }
-  | { type: "forum"; data: Post }
-  | { type: "marketplace"; data: Listing };
+  | { type: "blog"; data: BlogPostItem }
+  | { type: "forum"; data: ForumPostItem }
+  | { type: "marketplace"; data: ListingItem };
 
-function getChannelName(slug: string) {
-  return allChannels.find((ch) => ch.slug === slug)?.name ?? slug;
+export async function loader({ request }: Route.LoaderArgs) {
+  try {
+    const profileRes = await apiGet(request, "/api/members/me/");
+    if (!profileRes.ok) return redirect("/login");
+    const profile = await profileRes.json();
+    const slug = profile.slug;
+
+    const [blogRes, forumRes, listingRes] = await Promise.all([
+      apiGet(request, `/api/blog/posts/?author=${slug}`),
+      apiGet(request, `/api/forum/posts/?author=${slug}`),
+      apiGet(request, `/api/marketplace/listings/?author=${slug}`),
+    ]);
+
+    const blogData = blogRes.ok ? await blogRes.json() : { results: [] };
+    const forumData = forumRes.ok ? await forumRes.json() : { results: [] };
+    const listingData = listingRes.ok
+      ? await listingRes.json()
+      : { results: [] };
+
+    return {
+      blogs: blogData.results as BlogPostItem[],
+      forums: forumData.results as ForumPostItem[],
+      listings: listingData.results as ListingItem[],
+    };
+  } catch {
+    return redirect("/login");
+  }
 }
 
-function getCategoryLabel(cat: string) {
-  if (cat === "for-sale") return "For Sale";
-  if (cat === "wanted") return "Wanted";
-  if (cat === "free") return "Free";
-  return cat;
-}
+export async function action({ request }: Route.ActionArgs) {
+  const formData = await request.formData();
+  const intent = formData.get("intent") as string;
 
-function getCategoryClass(cat: string) {
-  if (cat === "for-sale") return "bg-primary/10 text-primary";
-  if (cat === "wanted") return "bg-amber-500/10 text-amber-600";
-  if (cat === "free") return "bg-green-500/10 text-green-600";
-  return "bg-muted text-muted-foreground";
+  if (intent === "delete") {
+    const postType = formData.get("postType") as string;
+    const postId = formData.get("postId") as string;
+
+    const endpoints: Record<string, string> = {
+      blog: `/api/blog/posts/${postId}/`,
+      forum: `/api/forum/posts/${postId}/`,
+      marketplace: `/api/marketplace/listings/${postId}/`,
+    };
+
+    const endpoint = endpoints[postType];
+    if (!endpoint) return { error: "Invalid post type" };
+
+    try {
+      const res = await apiDelete(request, endpoint);
+      if (!res.ok && res.status !== 204) {
+        return { error: "Failed to delete." };
+      }
+      return { deleted: `${postType}-${postId}` };
+    } catch {
+      return { error: "Unable to connect to server." };
+    }
+  }
+
+  return { error: "Unknown action" };
 }
 
 function getPostLink(item: UnifiedPost) {
@@ -67,17 +136,16 @@ function getPostLink(item: UnifiedPost) {
 }
 
 function getPostLikes(item: UnifiedPost) {
-  return item.data.likes;
+  return item.data.likes_count;
 }
 
 function getPostReplies(item: UnifiedPost): number {
   switch (item.type) {
     case "blog":
-      return item.data.comments.length;
+      return item.data.comment_count;
     case "forum":
-      return item.data.replies.length;
     case "marketplace":
-      return item.data.replies.length;
+      return item.data.reply_count;
   }
 }
 
@@ -92,29 +160,6 @@ function getPostIcon(type: UnifiedPost["type"]) {
   }
 }
 
-function getPostDate(item: UnifiedPost): string {
-  if (item.type === "blog") {
-    // MicroPost has date like "Mar 2, 2026" — strip the year, add a time
-    const d = item.data.date.replace(/, \d{4}$/, "");
-    const timeMap: Record<number, string> = {
-      1: "10:15 AM",
-      5: "8:30 AM",
-    };
-    return `${d} · ${timeMap[item.data.id] ?? "12:00 PM"}`;
-  }
-  if (item.type === "forum") {
-    const timeMap: Record<number, string> = {
-      1: "Mar 2 · 9:45 AM",
-    };
-    return timeMap[item.data.id] ?? "Mar 1 · 12:00 PM";
-  }
-  // marketplace
-  const timeMap: Record<number, string> = {
-    1: "Mar 2 · 8:50 AM",
-  };
-  return timeMap[item.data.id] ?? "Mar 1 · 12:00 PM";
-}
-
 function getUniqueKey(item: UnifiedPost) {
   return `${item.type}-${item.data.id}`;
 }
@@ -126,9 +171,8 @@ function PostCard({
 }: {
   item: UnifiedPost;
   activeTab: string;
-  onDelete: (key: string) => void;
+  onDelete: (type: string, id: number) => void;
 }) {
-  const key = getUniqueKey(item);
   const link = getPostLink(item);
   const image = item.data.image;
   const Icon = getPostIcon(item.type);
@@ -154,7 +198,7 @@ function PostCard({
           </p>
         </Link>
         <div className="mt-1.5 flex items-center gap-2 text-sm text-muted-foreground">
-          <span>{getPostDate(item)}</span>
+          <span>{item.data.time}</span>
           {activeTab === "all" && (
             <>
               <span>&middot;</span>
@@ -212,7 +256,7 @@ function PostCard({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"
-              onSelect={() => onDelete(key)}
+              onSelect={() => onDelete(item.type, item.data.id)}
             >
               <Trash2 className="size-4" />
               Delete
@@ -231,7 +275,7 @@ function PostList({
 }: {
   items: UnifiedPost[];
   activeTab: string;
-  onDelete: (key: string) => void;
+  onDelete: (type: string, id: number) => void;
 }) {
   if (items.length === 0) {
     return (
@@ -257,9 +301,10 @@ function PostList({
   );
 }
 
-export default function MemberFeedPage() {
+export default function MemberFeedPage({ loaderData }: Route.ComponentProps) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const deleteFetcher = useFetcher();
   const activeTab = searchParams.get("tab") || "all";
   const setActiveTab = (value: string) => {
     const next = new URLSearchParams(searchParams);
@@ -267,24 +312,44 @@ export default function MemberFeedPage() {
     else next.set("tab", value);
     setSearchParams(next, { replace: true });
   };
-  const [deletedKeys, setDeletedKeys] = useState<Set<string>>(new Set());
 
+  // Build unified list from loader data, sorted by created_at desc
   const allUnified = useMemo<UnifiedPost[]>(() => {
-    const blogs: UnifiedPost[] = allMicroPosts
-      .filter((p) => p.authorSlug === mySlug)
-      .map((data) => ({ type: "blog", data }));
-    const forums: UnifiedPost[] = allForumPosts
-      .filter((p) => p.authorSlug === mySlug)
-      .map((data) => ({ type: "forum", data }));
-    const marketplace: UnifiedPost[] = allListings
-      .filter((l) => l.authorSlug === mySlug)
-      .map((data) => ({ type: "marketplace", data }));
-    return [...blogs, ...forums, ...marketplace];
-  }, []);
+    const blogs: UnifiedPost[] = (loaderData.blogs || []).map(
+      (data: BlogPostItem) => ({
+        type: "blog" as const,
+        data,
+      }),
+    );
+    const forums: UnifiedPost[] = (loaderData.forums || []).map(
+      (data: ForumPostItem) => ({
+        type: "forum" as const,
+        data,
+      }),
+    );
+    const marketplace: UnifiedPost[] = (loaderData.listings || []).map(
+      (data: ListingItem) => ({
+        type: "marketplace" as const,
+        data,
+      }),
+    );
+    const all = [...blogs, ...forums, ...marketplace];
+    all.sort(
+      (a, b) =>
+        new Date(b.data.created_at).getTime() -
+        new Date(a.data.created_at).getTime(),
+    );
+    return all;
+  }, [loaderData]);
+
+  // Optimistically hide items being deleted
+  const pendingDelete = deleteFetcher.formData
+    ? `${deleteFetcher.formData.get("postType")}-${deleteFetcher.formData.get("postId")}`
+    : null;
 
   const live = useMemo(
-    () => allUnified.filter((item) => !deletedKeys.has(getUniqueKey(item))),
-    [allUnified, deletedKeys],
+    () => allUnified.filter((item) => getUniqueKey(item) !== pendingDelete),
+    [allUnified, pendingDelete],
   );
 
   const filtered = useMemo(
@@ -292,8 +357,11 @@ export default function MemberFeedPage() {
     [live, activeTab],
   );
 
-  const handleDelete = (key: string) => {
-    setDeletedKeys((prev) => new Set([...prev, key]));
+  const handleDelete = (type: string, id: number) => {
+    deleteFetcher.submit(
+      { intent: "delete", postType: type, postId: String(id) },
+      { method: "post" },
+    );
   };
 
   return (
