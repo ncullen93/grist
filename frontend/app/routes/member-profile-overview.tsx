@@ -1,11 +1,36 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router";
-import { ArrowLeft, Plus, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, Plus, X } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from "~/components/ui/dropdown-menu";
+
+type TextStyle = "normal" | "h1" | "h2" | "h3" | "h4";
+
+const styleLabels: Record<TextStyle, string> = {
+  normal: "Normal text",
+  h1: "Heading 1",
+  h2: "Heading 2",
+  h3: "Heading 3",
+  h4: "Heading 4",
+};
+
+const styleClasses: Record<TextStyle, string> = {
+  normal: "text-base leading-relaxed",
+  h1: "text-3xl font-display font-semibold leading-tight",
+  h2: "text-2xl font-display font-semibold leading-tight",
+  h3: "text-xl font-display font-semibold leading-snug",
+  h4: "text-lg font-display font-medium leading-snug",
+};
 
 type Block =
-  | { id: number; type: "text"; content: string }
+  | { id: number; type: "text"; content: string; style: TextStyle }
   | { id: number; type: "image"; preview: string };
 
 let _blockId = 0;
@@ -18,8 +43,16 @@ const demoBlocks: Block[] = [
   {
     id: newId(),
     type: "text",
+    style: "normal",
     content:
-      "Owner of a 1905 Colonial Revival in Brewster. Passionate about preserving the character of historic homes while making them livable for modern families.\n\nWe purchased The Demo House in 2019, drawn in by the original hardwood floors, the wrap-around porch, and the sprawling backyard that backs up to a cranberry bog. The previous owners had done some updates over the years — a new roof in 2010, updated electrical — but much of the home's original character remained intact.",
+      "Owner of a 1905 Colonial Revival in Brewster. Passionate about preserving the character of historic homes while making them livable for modern families.",
+  },
+  {
+    id: newId(),
+    type: "text",
+    style: "normal",
+    content:
+      "We purchased The Demo House in 2019, drawn in by the original hardwood floors, the wrap-around porch, and the sprawling backyard that backs up to a cranberry bog. The previous owners had done some updates over the years — a new roof in 2010, updated electrical — but much of the home's original character remained intact.",
   },
   {
     id: newId(),
@@ -30,13 +63,22 @@ const demoBlocks: Block[] = [
   {
     id: newId(),
     type: "text",
+    style: "normal",
     content:
-      "Our first major project was restoring the original windows. The house has 32 windows, each with the original wavy glass panes. Rather than replacing them, we worked with a local craftsman to repair the sashes, add weatherstripping, and install interior storm windows. It was more expensive than replacement vinyl, but the character is irreplaceable.\n\nWe've since tackled the kitchen — keeping the original butler's pantry layout but updating the appliances and countertops — and are currently working on restoring the plaster walls in the upstairs bedrooms.",
+      "Our first major project was restoring the original windows. The house has 32 windows, each with the original wavy glass panes. Rather than replacing them, we worked with a local craftsman to repair the sashes, add weatherstripping, and install interior storm windows. It was more expensive than replacement vinyl, but the character is irreplaceable.",
+  },
+  {
+    id: newId(),
+    type: "text",
+    style: "normal",
+    content:
+      "We've since tackled the kitchen — keeping the original butler's pantry layout but updating the appliances and countertops — and are currently working on restoring the plaster walls in the upstairs bedrooms.",
   },
 ];
 
 export default function MemberProfileOverviewPage() {
   const [blocks, setBlocks] = useState<Block[]>(demoBlocks);
+  const [activeStyle, setActiveStyle] = useState<TextStyle>("normal");
   const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
   const [saved, setSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -51,12 +93,19 @@ export default function MemberProfileOverviewPage() {
     );
   };
 
+  const updateStyle = (id: number, style: TextStyle) => {
+    setBlocks((prev) =>
+      prev.map((b) => (b.id === id && b.type === "text" ? { ...b, style } : b)),
+    );
+    setActiveStyle(style);
+  };
+
   const removeBlock = (id: number) => {
     setSelectedImageId(null);
     setBlocks((prev) => {
       const filtered = prev.filter((b) => b.id !== id);
       if (filtered.length === 0) {
-        return [{ id: newId(), type: "text" as const, content: "" }];
+        return [{ id: newId(), type: "text" as const, content: "", style: "normal" as TextStyle }];
       }
       const merged: Block[] = [];
       for (const block of filtered) {
@@ -80,7 +129,11 @@ export default function MemberProfileOverviewPage() {
       activeBlockId.current = blockId;
       activeCursorPos.current = el.selectionStart ?? el.value.length;
     }
-  }, []);
+    const block = blocks.find((b) => b.id === blockId);
+    if (block?.type === "text") {
+      setActiveStyle(block.style);
+    }
+  }, [blocks]);
 
   const focusTextBlock = useCallback(
     (blockId: number, pos: "start" | "end") => {
@@ -101,6 +154,33 @@ export default function MemberProfileOverviewPage() {
       const el = e.currentTarget;
       const pos = el.selectionStart;
 
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        const before = el.value.slice(0, pos);
+        const after = el.value.slice(pos);
+        const idx = blocks.findIndex((b) => b.id === blockId);
+        const block = blocks[idx] as Block & { type: "text" };
+        const afterId = newId();
+
+        setBlocks((prev) => {
+          const result = [...prev];
+          result.splice(idx, 1,
+            { id: block.id, type: "text" as const, content: before, style: block.style },
+            { id: afterId, type: "text" as const, content: after, style: "normal" as TextStyle },
+          );
+          return result;
+        });
+
+        requestAnimationFrame(() => {
+          const newEl = textareaEls.current.get(afterId);
+          if (newEl) {
+            newEl.focus();
+            newEl.setSelectionRange(0, 0);
+          }
+        });
+        return;
+      }
+
       if (e.key === "ArrowDown" && el.value.indexOf("\n", pos) === -1) {
         const idx = blocks.findIndex((b) => b.id === blockId);
         const next = blocks[idx + 1];
@@ -108,23 +188,52 @@ export default function MemberProfileOverviewPage() {
           e.preventDefault();
           setSelectedImageId(next.id);
           imageEls.current.get(next.id)?.focus();
+        } else if (next?.type === "text") {
+          e.preventDefault();
+          focusTextBlock(next.id, "start");
         }
       }
 
-      if (
-        e.key === "ArrowUp" &&
-        (pos === 0 || el.value.lastIndexOf("\n", pos - 1) === -1)
-      ) {
+      if (e.key === "ArrowUp" && (pos === 0 || el.value.lastIndexOf("\n", pos - 1) === -1)) {
         const idx = blocks.findIndex((b) => b.id === blockId);
         const prev = blocks[idx - 1];
         if (prev?.type === "image") {
           e.preventDefault();
           setSelectedImageId(prev.id);
           imageEls.current.get(prev.id)?.focus();
+        } else if (prev?.type === "text") {
+          e.preventDefault();
+          focusTextBlock(prev.id, "end");
+        }
+      }
+
+      if (e.key === "Backspace" && pos === 0 && el.selectionEnd === 0) {
+        const idx = blocks.findIndex((b) => b.id === blockId);
+        const prev = blocks[idx - 1];
+        if (prev?.type === "text") {
+          e.preventDefault();
+          const mergePos = prev.content.length;
+          setBlocks((p) => {
+            const result = [...p];
+            result.splice(idx - 1, 2, {
+              id: prev.id,
+              type: "text" as const,
+              content: prev.content + el.value,
+              style: prev.style,
+            });
+            return result;
+          });
+          requestAnimationFrame(() => {
+            const prevEl = textareaEls.current.get(prev.id);
+            if (prevEl) {
+              prevEl.focus();
+              prevEl.setSelectionRange(mergePos, mergePos);
+            }
+          });
         }
       }
     },
-    [blocks],
+    [blocks, focusTextBlock],
   );
 
   const handleImageKeyDown = useCallback(
@@ -182,7 +291,7 @@ export default function MemberProfileOverviewPage() {
         return [
           ...prev,
           { id: newId(), type: "image" as const, preview },
-          { id: afterId, type: "text" as const, content: "" } as Block,
+          { id: afterId, type: "text" as const, content: "", style: "normal" as TextStyle } as Block,
         ];
       }
 
@@ -193,10 +302,10 @@ export default function MemberProfileOverviewPage() {
 
       const newBlocks: Block[] = [];
       if (before) {
-        newBlocks.push({ id: block.id, type: "text", content: before });
+        newBlocks.push({ id: block.id, type: "text", content: before, style: block.style });
       }
       newBlocks.push({ id: newId(), type: "image", preview });
-      newBlocks.push({ id: afterId, type: "text", content: after });
+      newBlocks.push({ id: afterId, type: "text", content: after, style: "normal" as TextStyle });
 
       const result = [...prev];
       result.splice(idx, 1, ...newBlocks);
@@ -264,7 +373,47 @@ export default function MemberProfileOverviewPage() {
         {/* Content card */}
         <div className="mt-4 rounded-xl border border-border bg-background">
           {/* Toolbar */}
-          <div className="sticky top-18 z-10 flex items-center gap-2 border-b border-border bg-background px-6 py-5 rounded-t-xl">
+          <div className="sticky top-18 z-10 flex items-center gap-3 border-b border-border bg-background px-6 py-5 rounded-t-xl">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="rounded-full gap-1.5 min-w-[130px] justify-between">
+                  {styleLabels[activeStyle]}
+                  <ChevronDown className="size-3.5 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48" onCloseAutoFocus={(e) => {
+                    e.preventDefault();
+                    const id = activeBlockId.current;
+                    if (id !== null) {
+                      const el = textareaEls.current.get(id);
+                      if (el) el.focus();
+                    }
+                  }}>
+                <DropdownMenuRadioGroup
+                  value={activeStyle}
+                  onValueChange={(v) => {
+                    const id = activeBlockId.current;
+                    if (id !== null) updateStyle(id, v as TextStyle);
+                  }}
+                >
+                  <DropdownMenuRadioItem value="normal" className="text-sm">
+                    Normal text
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="h1" className="text-lg font-display font-semibold">
+                    Heading 1
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="h2" className="text-base font-display font-semibold">
+                    Heading 2
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="h3" className="text-[15px] font-display font-semibold">
+                    Heading 3
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="h4" className="text-sm font-display font-medium">
+                    Heading 4
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="outline"
               size="sm"
@@ -282,6 +431,7 @@ export default function MemberProfileOverviewPage() {
                 <AutoGrowTextarea
                   key={block.id}
                   value={block.content}
+                  textStyle={block.style}
                   onChange={(v) => updateText(block.id, v)}
                   onCursorChange={() => trackCursor(block.id)}
                   onKeyDown={(e) => handleTextareaKeyDown(e, block.id)}
@@ -290,7 +440,6 @@ export default function MemberProfileOverviewPage() {
                     if (el) textareaEls.current.set(block.id, el);
                     else textareaEls.current.delete(block.id);
                   }}
-                  isFirst={i === 0 && blocks.every((b) => b.type === "text")}
                   placeholder={i === 0 ? "Write about yourself and your home..." : ""}
                 />
               ) : (
@@ -348,33 +497,31 @@ export default function MemberProfileOverviewPage() {
 
 function AutoGrowTextarea({
   value,
+  textStyle = "normal",
   onChange,
   placeholder,
   onCursorChange,
   onKeyDown,
   onFocus,
   registerEl,
-  isFirst = false,
 }: {
   value: string;
+  textStyle?: TextStyle;
   onChange: (value: string) => void;
   placeholder: string;
   onCursorChange: () => void;
   onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onFocus: () => void;
   registerEl: (el: HTMLTextAreaElement | null) => void;
-  isFirst?: boolean;
 }) {
   const ref = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     if (ref.current) {
       ref.current.style.height = "auto";
-      const minH = isFirst ? 160 : 0;
-      ref.current.style.height =
-        Math.max(ref.current.scrollHeight, minH) + "px";
+      ref.current.style.height = ref.current.scrollHeight + "px";
     }
-  }, [value, isFirst]);
+  }, [value, textStyle]);
 
   return (
     <textarea
@@ -396,7 +543,7 @@ function AutoGrowTextarea({
       onKeyDown={onKeyDown}
       placeholder={placeholder}
       rows={1}
-      className={`w-full resize-none border-0 bg-transparent px-0 py-0 text-base leading-relaxed outline-none placeholder:text-muted-foreground ${isFirst ? "min-h-40" : "min-h-0"}`}
+      className={`w-full resize-none border-0 bg-transparent px-0 py-0 outline-none placeholder:text-muted-foreground ${styleClasses[textStyle]} min-h-0`}
     />
   );
 }
