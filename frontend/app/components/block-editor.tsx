@@ -421,9 +421,11 @@ export function BlockEditor({
         )}
       </div>
 
-      <div className="p-6 min-h-50 cursor-text" onClick={() => {
-        const first = blocks.find((b) => b.type === "text");
-        if (first) textareaEls.current.get(first.id)?.focus();
+      <div className="p-6 min-h-50 cursor-text" onMouseDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        e.preventDefault();
+        const last = [...blocks].reverse().find((b) => b.type === "text");
+        if (last) textareaEls.current.get(last.id)?.focus();
       }}>
         {blocks.map((block, i) =>
           block.type === "text" ? (
