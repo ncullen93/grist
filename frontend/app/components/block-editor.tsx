@@ -421,7 +421,10 @@ export function BlockEditor({
         )}
       </div>
 
-      <div className="p-6">
+      <div className="p-6 min-h-50 cursor-text" onClick={() => {
+        const first = blocks.find((b) => b.type === "text");
+        if (first) textareaEls.current.get(first.id)?.focus();
+      }}>
         {blocks.map((block, i) =>
           block.type === "text" ? (
             <AutoGrowTextarea
