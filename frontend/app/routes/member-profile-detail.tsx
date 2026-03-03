@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { ArrowLeft, Plus, Check } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
@@ -87,7 +87,14 @@ export default function MemberProfileDetailPage({
   loaderData,
 }: Route.ComponentProps) {
   const { member } = loaderData;
-  const [activeTab, setActiveTab] = useState("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "overview";
+  const setActiveTab = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === "overview") next.delete("tab");
+    else next.set("tab", value);
+    setSearchParams(next, { replace: true });
+  };
   const [isFollowing, setIsFollowing] = useState(member.is_following);
 
   return (

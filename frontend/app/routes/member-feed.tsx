@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import {
   Heart,
   Share2,
@@ -259,7 +259,14 @@ function PostList({
 
 export default function MemberFeedPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "all";
+  const setActiveTab = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === "all") next.delete("tab");
+    else next.set("tab", value);
+    setSearchParams(next, { replace: true });
+  };
   const [deletedKeys, setDeletedKeys] = useState<Set<string>>(new Set());
 
   const allUnified = useMemo<UnifiedPost[]>(() => {

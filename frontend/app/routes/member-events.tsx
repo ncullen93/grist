@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import { PageHeader } from "~/components/page-header";
@@ -8,7 +8,14 @@ import type { DemoEvent } from "~/lib/demo-data";
 
 export default function MemberEventsPage() {
   const [events, setEvents] = useState<DemoEvent[]>(allEvents);
-  const [activeTab, setActiveTab] = useState("upcoming");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "upcoming";
+  const setActiveTab = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === "upcoming") next.delete("tab");
+    else next.set("tab", value);
+    setSearchParams(next, { replace: true });
+  };
 
   const featured = events.find((e) => e.featured && e.status === "upcoming");
 

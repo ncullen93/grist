@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { Heart, MessageCircle, Check, ChevronRight } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Progress } from "~/components/ui/progress";
@@ -90,7 +90,14 @@ const allFeedItems = buildFeed();
 
 
 export default function MemberHomePage() {
-  const [audience, setAudience] = useState<AudienceType>("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const audience = (searchParams.get("tab") || "all") as AudienceType;
+  const setAudience = (value: AudienceType) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === "all") next.delete("tab");
+    else next.set("tab", value);
+    setSearchParams(next, { replace: true });
+  };
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
 
   const completedCount = completedItems.size;

@@ -1,5 +1,12 @@
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import { PageHeader } from "~/components/page-header";
 
 export default function MemberSettingsPage() {
@@ -66,15 +73,16 @@ export default function MemberSettingsPage() {
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-2.5">
                 Profile visibility
               </label>
-              <select
-                value={profileVisibility}
-                onChange={(e) => setProfileVisibility(e.target.value)}
-                className="rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary/30"
-              >
-                <option value="everyone">Everyone</option>
-                <option value="members">Members only</option>
-                <option value="private">Private</option>
-              </select>
+              <Select value={profileVisibility} onValueChange={setProfileVisibility}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="everyone">Everyone</SelectItem>
+                  <SelectItem value="members">Members only</SelectItem>
+                  <SelectItem value="private">Private</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
