@@ -62,7 +62,7 @@ class MemberProfileViewSet(viewsets.ModelViewSet):
         ext = file.name.rsplit(".", 1)[-1].lower() if "." in file.name else "jpg"
         filename = f"uploads/{uuid.uuid4().hex}.{ext}"
         saved = default_storage.save(filename, file)
-        url = f"{settings.MEDIA_URL}{saved}"
+        url = request.build_absolute_uri(f"{settings.MEDIA_URL}{saved}")
         return Response({"url": url})
 
     @action(detail=True, methods=["post", "delete"])

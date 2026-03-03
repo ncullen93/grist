@@ -31,6 +31,8 @@ class MemberProfileDetailSerializer(serializers.ModelSerializer):
 
 
 class MemberProfileUpdateSerializer(serializers.ModelSerializer):
+    photo = serializers.URLField(allow_blank=True, required=False)
+
     class Meta:
         model = MemberProfile
         fields = [
