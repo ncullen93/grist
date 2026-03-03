@@ -80,4 +80,4 @@ class ListingCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Listing
-        fields = ["category", "title", "description", "price", "image", "condition", "tags"]
+        fields = ["id", "category", "title", "description", "price", "image", "condition", "tags"]

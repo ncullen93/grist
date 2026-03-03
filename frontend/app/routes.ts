@@ -54,6 +54,9 @@ export default [
     route("posts/new-blog", "routes/member-posts-new.tsx"),
     route("posts/new-forum", "routes/member-posts-new-forum.tsx"),
     route("posts/new-marketplace", "routes/member-posts-new-marketplace.tsx"),
+    route("posts/edit-blog/:id", "routes/member-posts-edit-blog.tsx"),
+    route("posts/edit-forum/:id", "routes/member-posts-edit-forum.tsx"),
+    route("posts/edit-marketplace/:id", "routes/member-posts-edit-marketplace.tsx"),
     route("blog", "routes/member-blog.tsx"),
 
     // Admin

@@ -27,7 +27,7 @@ class BlogPostViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == "retrieve":
             return BlogPostDetailSerializer
-        if self.action == "create":
+        if self.action in ("create", "update", "partial_update"):
             return BlogPostCreateSerializer
         return BlogPostListSerializer
 

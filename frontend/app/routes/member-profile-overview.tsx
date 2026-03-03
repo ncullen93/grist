@@ -170,7 +170,7 @@ export default function MemberProfileOverviewPage({
                 onClick={handleSave}
                 disabled={isSaving}
               >
-                {isSaving ? "Saving..." : "Save"}
+                Save
               </Button>
             </div>
           </div>

@@ -480,7 +480,7 @@ export default function AdminEventEditPage({
                 disabled={isSubmitting}
                 className="rounded-full px-8"
               >
-                {isSubmitting ? "Saving..." : "Save Changes"}
+                Save Changes
               </Button>
               <Link
                 to="/m/admin"

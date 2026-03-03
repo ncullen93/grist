@@ -372,7 +372,7 @@ export default function MemberMarketplaceDetailPage({
               onClick={handleReply}
               disabled={!replyText.trim() || isReplying}
             >
-              {isReplying ? "Posting..." : "Reply"}
+              Reply
             </Button>
           </div>
         </div>

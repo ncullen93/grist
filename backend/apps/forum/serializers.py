@@ -91,4 +91,4 @@ class ForumPostCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ForumPost
-        fields = ["title", "body", "image", "channel", "topics"]
+        fields = ["id", "title", "body", "image", "channel", "topics"]

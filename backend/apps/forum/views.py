@@ -20,11 +20,13 @@ from .serializers import (
 class ChannelViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Channel.objects.all()
     serializer_class = ChannelSerializer
+    pagination_class = None
 
 
 class TopicViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Topic.objects.all()
     serializer_class = TopicSerializer
+    pagination_class = None
 
 
 class ForumPostViewSet(viewsets.ModelViewSet):
@@ -40,7 +42,7 @@ class ForumPostViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == "retrieve":
             return ForumPostDetailSerializer
-        if self.action == "create":
+        if self.action in ("create", "update", "partial_update"):
             return ForumPostCreateSerializer
         return ForumPostListSerializer
 

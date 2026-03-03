@@ -241,14 +241,6 @@ export default function MemberForumDetailPage({
 
         {/* Post body */}
         <div className="mt-8 border-t border-border pt-8">
-          {post.image && (
-            <img
-              src={post.image}
-              alt=""
-              className="w-full rounded-xl object-cover aspect-video mb-6"
-            />
-          )}
-
           <RenderContent content={post.body} />
 
           {(post.topic_names?.length ?? 0) > 0 && (
@@ -336,7 +328,7 @@ export default function MemberForumDetailPage({
               onClick={handleReply}
               disabled={!replyText.trim() || isReplying}
             >
-              {isReplying ? "Posting..." : "Reply"}
+              Reply
             </Button>
           </div>
         </div>

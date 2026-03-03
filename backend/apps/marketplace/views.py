@@ -17,6 +17,7 @@ from .serializers import (
 class ListingTagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = ListingTag.objects.all()
     serializer_class = ListingTagSerializer
+    pagination_class = None
 
 
 class ListingViewSet(viewsets.ModelViewSet):
@@ -32,7 +33,7 @@ class ListingViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == "retrieve":
             return ListingDetailSerializer
-        if self.action == "create":
+        if self.action in ("create", "update", "partial_update"):
             return ListingCreateSerializer
         return ListingListSerializer
 

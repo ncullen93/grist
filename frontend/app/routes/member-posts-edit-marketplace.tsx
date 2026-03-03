@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useFetcher } from "react-router";
 import { redirect } from "react-router";
-import type { Route } from "./+types/member-posts-new-marketplace";
-import { apiGet, apiPost, apiUpload } from "~/lib/api.server";
+import toast from "react-hot-toast";
+import type { Route } from "./+types/member-posts-edit-marketplace";
+import { apiGet, apiPatch, apiUpload } from "~/lib/api.server";
 import { ImagePlus, X, Loader2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -18,18 +19,35 @@ const categories: { label: string; value: ListingCategory }[] = [
   { label: "Free", value: "free" },
 ];
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request, params }: Route.LoaderArgs) {
   try {
-    const res = await apiGet(request, "/api/members/me/");
-    if (!res.ok) return redirect("/login");
-    const profile = await res.json();
-    return { name: profile.name, location: profile.location };
-  } catch {
+    const [profileRes, listingRes] = await Promise.all([
+      apiGet(request, "/api/members/me/"),
+      apiGet(request, `/api/marketplace/listings/${params.id}/`),
+    ]);
+    if (!profileRes.ok) return redirect("/login");
+    if (!listingRes.ok) throw new Response("Listing not found", { status: 404 });
+    const profile = await profileRes.json();
+    const listing = await listingRes.json();
+    return {
+      name: profile.name,
+      location: profile.location,
+      listing: {
+        id: listing.id,
+        title: listing.title,
+        description: listing.description,
+        category: listing.category,
+        price: listing.price,
+        image: listing.image,
+      },
+    };
+  } catch (e) {
+    if (e instanceof Response) throw e;
     return redirect("/login");
   }
 }
 
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request, params }: Route.ActionArgs) {
   const contentType = request.headers.get("content-type") || "";
 
   // Image upload — forward multipart to Django
@@ -50,7 +68,7 @@ export async function action({ request }: Route.ActionArgs) {
     }
   }
 
-  // Create marketplace listing
+  // Update marketplace listing
   const formData = await request.formData();
   const title = formData.get("title") as string;
   const description = formData.get("description") as string;
@@ -58,41 +76,69 @@ export async function action({ request }: Route.ActionArgs) {
   const price = (formData.get("price") as string) || "";
   const image = (formData.get("image") as string) || "";
 
-  const payload: Record<string, string> = { title, description, category };
-  if (price) payload.price = price;
-  if (image) payload.image = image;
-
   try {
-    const res = await apiPost(request, "/api/marketplace/listings/", payload);
+    const res = await apiPatch(request, `/api/marketplace/listings/${params.id}/`, {
+      title,
+      description,
+      category,
+      price,
+      image,
+    });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      const msg = err.detail || Object.values(err).flat().join(" ") || "Failed to create listing.";
-      return { error: msg };
+      return { error: err.detail || "Failed to save listing." };
     }
-    const created = await res.json();
-    return redirect(`/m/marketplace/${created.id}`);
+    return { saved: true };
   } catch {
     return { error: "Unable to connect to server." };
   }
 }
 
-export default function MemberPostsNewMarketplacePage({
+function parseBlocks(content: string): Block[] {
+  try {
+    const blocks = JSON.parse(content);
+    if (Array.isArray(blocks)) {
+      return blocks.map((b: { type: string; style?: string; content?: string; preview?: string }): Block => {
+        if (b.type === "image" && b.preview) {
+          return { id: newBlockId(), type: "image", preview: b.preview };
+        }
+        return { id: newBlockId(), type: "text", content: b.content || "", style: (b.style || "normal") as "normal" };
+      });
+    }
+  } catch {}
+  return [{ id: newBlockId(), type: "text", content, style: "normal" }];
+}
+
+export default function EditMarketplaceListingPage({
   loaderData,
 }: Route.ComponentProps) {
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState<ListingCategory>("for-sale");
-  const [price, setPrice] = useState("");
-  const [blocks, setBlocks] = useState<Block[]>([
-    { id: newBlockId(), type: "text", content: "", style: "normal" },
-  ]);
+  const { listing } = loaderData;
+  const [title, setTitle] = useState(listing.title);
+  const [category, setCategory] = useState<ListingCategory>(
+    (listing.category as ListingCategory) || "for-sale",
+  );
+  const [price, setPrice] = useState(listing.price || "");
+  const [blocks, setBlocks] = useState<Block[]>(() =>
+    parseBlocks(listing.description),
+  );
   const [images, setImages] = useState<
     { id: number; preview: string; uploaded?: boolean }[]
-  >([]);
+  >(() =>
+    listing.image
+      ? [{ id: 0, preview: listing.image, uploaded: true }]
+      : [],
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const nextId = useRef(0);
+  const nextId = useRef(1);
   const publishFetcher = useFetcher();
   const uploadFetcher = useFetcher();
-  const isPublishing = publishFetcher.state === "submitting";
+  const isSaving = publishFetcher.state === "submitting";
+
+  useEffect(() => {
+    if (publishFetcher.state === "idle" && publishFetcher.data?.saved) {
+      toast.success("Saved");
+    }
+  }, [publishFetcher.state, publishFetcher.data]);
 
   // Promise resolve ref for the async gallery image upload
   const pendingResolve = useRef<
@@ -156,7 +202,7 @@ export default function MemberPostsNewMarketplacePage({
     title.trim() !== "" &&
     blocks.some((b) => b.type === "text" && b.content.trim() !== "");
 
-  const handlePublish = () => {
+  const handleSave = () => {
     if (!hasContent) return;
     const cleanBlocks = blocks
       .filter(
@@ -187,7 +233,7 @@ export default function MemberPostsNewMarketplacePage({
 
   return (
     <>
-      <PageHeader title="New Marketplace Listing" />
+      <PageHeader title="Edit Listing" />
       <div className="max-w-4xl mx-auto px-4 md:px-8 pt-8 pb-48">
         {/* Hidden file input */}
         <Input
@@ -212,10 +258,10 @@ export default function MemberPostsNewMarketplacePage({
             />
             <Button
               className="rounded-full px-8 shrink-0"
-              onClick={handlePublish}
-              disabled={!hasContent || isPublishing || isUploading}
+              onClick={handleSave}
+              disabled={!hasContent || isSaving || isUploading}
             >
-              Publish
+              Save
             </Button>
           </div>
           <p className="mt-3 text-sm text-muted-foreground">

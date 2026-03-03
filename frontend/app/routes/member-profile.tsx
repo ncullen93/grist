@@ -192,7 +192,7 @@ export default function MyProfilePage({
               className="rounded-full px-8"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Saving..." : "Save changes"}
+              Save changes
             </Button>
             {actionData?.success && !isSubmitting && (
               <p className="text-sm text-primary">

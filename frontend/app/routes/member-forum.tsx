@@ -1,22 +1,111 @@
-import { useState, useMemo, useRef, useEffect } from "react";
-import { Link } from "react-router";
-import { Search, SlidersHorizontal, Plus, X } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Link, useFetcher, useSearchParams } from "react-router";
+import { redirect } from "react-router";
+import { Search, SlidersHorizontal, Plus, Loader2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { PageHeader } from "~/components/page-header";
-import {
-  allChannels,
-  allTopics,
-  allPosts as initialPosts,
-} from "~/lib/demo-data";
+import { apiGet } from "~/lib/api.server";
+import type { Route } from "./+types/member-forum";
 
-export default function MemberForumPage() {
-  const [search, setSearch] = useState("");
-  const [activeChannel, setActiveChannel] = useState<string | null>(null);
-  const [activeTopic, setActiveTopic] = useState<string | null>(null);
+interface Channel {
+  id: number;
+  name: string;
+  slug: string;
+}
+
+interface Topic {
+  id: number;
+  name: string;
+  slug: string;
+}
+
+interface ForumPostItem {
+  id: number;
+  author_slug: string;
+  author_name: string;
+  location: string;
+  home_photo: string;
+  channel_name: string;
+  channel_slug: string;
+  topic_names: string[];
+  title: string;
+  body: string;
+  image: string;
+  pinned: boolean;
+  likes_count: number;
+  reply_count: number;
+  time: string;
+  created_at: string;
+}
+
+export async function loader({ request }: Route.LoaderArgs) {
+  const url = new URL(request.url);
+  const page = url.searchParams.get("page") || "1";
+  const search = url.searchParams.get("search") || "";
+  const channel = url.searchParams.get("channel") || "";
+  const topic = url.searchParams.get("topic") || "";
+
+  const params = new URLSearchParams();
+  params.set("page", page);
+  if (search) params.set("search", search);
+  if (channel) params.set("channel", channel);
+  if (topic) params.set("topic", topic);
+
+  try {
+    const [postsRes, channelsRes, topicsRes] = await Promise.all([
+      apiGet(request, `/api/forum/posts/?${params}`),
+      apiGet(request, "/api/forum/channels/"),
+      apiGet(request, "/api/forum/topics/"),
+    ]);
+    if (!postsRes.ok) return redirect("/login");
+    const postsData = await postsRes.json();
+    const channelsData = channelsRes.ok ? await channelsRes.json() : { results: [] };
+    const topicsData = topicsRes.ok ? await topicsRes.json() : { results: [] };
+    return {
+      results: postsData.results as ForumPostItem[],
+      nextPage: postsData.next ? String(Number(page) + 1) : null,
+      page: Number(page),
+      channels: (channelsData.results ?? channelsData) as Channel[],
+      topics: (topicsData.results ?? topicsData) as Topic[],
+    };
+  } catch {
+    return redirect("/login");
+  }
+}
+
+export default function MemberForumPage({ loaderData }: Route.ComponentProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchInput, setSearchInput] = useState(
+    searchParams.get("search") || "",
+  );
+  const [items, setItems] = useState(loaderData.results);
+  const [nextPage, setNextPage] = useState(loaderData.nextPage);
   const [showFilter, setShowFilter] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
+  const fetcher = useFetcher({});
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  const activeChannel = searchParams.get("channel") || "";
+  const activeTopic = searchParams.get("topic") || "";
+  const activeFilterCount = (activeChannel ? 1 : 0) + (activeTopic ? 1 : 0);
+
+  // Reset when loaderData changes
+  useEffect(() => {
+    setItems(loaderData.results);
+    setNextPage(loaderData.nextPage);
+  }, [loaderData]);
+
+  // Append fetcher results for infinite scroll
+  useEffect(() => {
+    if (fetcher.data?.results) {
+      setItems((prev) => [...prev, ...fetcher.data.results]);
+      setNextPage(fetcher.data.nextPage);
+    }
+  }, [fetcher.data]);
+
+  // Close filter on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
@@ -29,21 +118,49 @@ export default function MemberForumPage() {
     }
   }, [showFilter]);
 
-  const filteredPosts = useMemo(() => {
-    const q = search.toLowerCase();
-    return initialPosts.filter((post) => {
-      const channelMatch = !activeChannel || post.channel === activeChannel;
-      const topicMatch = !activeTopic || post.topics.includes(activeTopic);
-      const searchMatch =
-        !q ||
-        post.title.toLowerCase().includes(q) ||
-        post.body.toLowerCase().includes(q);
-      return channelMatch && topicMatch && searchMatch;
-    });
-  }, [search, activeChannel, activeTopic]);
+  // IntersectionObserver for infinite scroll
+  const loadMore = useCallback(() => {
+    if (!nextPage || fetcher.state !== "idle") return;
+    const params = new URLSearchParams(searchParams);
+    params.set("page", nextPage);
+    fetcher.load(`/m/forum?${params}`);
+  }, [nextPage, fetcher.state, searchParams]);
 
-  const activeFilterCount =
-    (activeChannel ? 1 : 0) + (activeTopic ? 1 : 0);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) loadMore();
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loadMore]);
+
+  // Debounced search
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const next = new URLSearchParams(searchParams);
+      next.delete("page");
+      if (value) next.set("search", value);
+      else next.delete("search");
+      setSearchParams(next, { replace: true });
+    }, 300);
+  };
+
+  const setFilter = (key: string, value: string | null) => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("page");
+    if (value) next.set(key, value);
+    else next.delete(key);
+    setSearchParams(next, { replace: true });
+  };
+
+  const isLoadingMore = fetcher.state === "loading";
 
   return (
     <>
@@ -55,8 +172,8 @@ export default function MemberForumPage() {
             <Search className="mr-3 size-4 shrink-0 text-muted-foreground" />
             <Input
               type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search..."
               className="h-auto border-0 bg-transparent px-0 py-0 shadow-none focus-visible:ring-0 focus-visible:border-0"
             />
@@ -81,12 +198,14 @@ export default function MemberForumPage() {
             {showFilter && (
               <div className="absolute right-0 mt-2 w-72 rounded-xl border border-border bg-background p-4 shadow-lg z-30">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm font-semibold text-foreground">Filters</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    Filters
+                  </span>
                   {activeFilterCount > 0 && (
                     <button
                       onClick={() => {
-                        setActiveChannel(null);
-                        setActiveTopic(null);
+                        setFilter("channel", null);
+                        setFilter("topic", null);
                       }}
                       className="text-xs text-primary hover:underline"
                     >
@@ -98,13 +217,18 @@ export default function MemberForumPage() {
                 <div className="space-y-4">
                   {/* Channel */}
                   <div>
-                    <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">Channel</p>
+                    <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Channel
+                    </p>
                     <div className="flex flex-wrap gap-1.5">
-                      {allChannels.map((ch) => (
+                      {loaderData.channels.map((ch) => (
                         <button
                           key={ch.slug}
                           onClick={() =>
-                            setActiveChannel(activeChannel === ch.slug ? null : ch.slug)
+                            setFilter(
+                              "channel",
+                              activeChannel === ch.slug ? null : ch.slug,
+                            )
                           }
                           className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                             activeChannel === ch.slug
@@ -120,21 +244,26 @@ export default function MemberForumPage() {
 
                   {/* Topic */}
                   <div>
-                    <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">Topic</p>
+                    <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Topic
+                    </p>
                     <div className="flex flex-wrap gap-1.5">
-                      {allTopics.map((t) => (
+                      {loaderData.topics.map((t) => (
                         <button
-                          key={t}
+                          key={t.slug}
                           onClick={() =>
-                            setActiveTopic(activeTopic === t ? null : t)
+                            setFilter(
+                              "topic",
+                              activeTopic === t.slug ? null : t.slug,
+                            )
                           }
                           className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                            activeTopic === t
+                            activeTopic === t.slug
                               ? "bg-primary text-primary-foreground"
                               : "bg-muted text-muted-foreground hover:bg-muted/80"
                           }`}
                         >
-                          {t}
+                          {t.name}
                         </button>
                       ))}
                     </div>
@@ -153,73 +282,78 @@ export default function MemberForumPage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 md:px-8 pb-8">
-        {/* Posts */}
-        <div>
-          {filteredPosts.length === 0 ? (
-            <div className="rounded-xl border border-border p-16 text-center">
-              <p className="text-sm text-muted-foreground">
-                No posts in this view yet.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredPosts.map((post) => (
-                <Link
-                  key={post.id}
-                  to={`/m/forum/${post.id}`}
-                  className="group block rounded-xl border border-border transition-colors hover:border-border/80 hover:bg-muted/30"
-                >
-                  {post.image && (
-                    <div className="overflow-hidden rounded-t-xl">
-                      <img
-                        src={post.image}
-                        alt=""
-                        className="aspect-21/9 w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    </div>
-                  )}
-
-                  <div className="px-6 py-5">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={post.homePhoto}
-                        alt=""
-                        className="size-9 rounded-full object-cover shrink-0"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-foreground">
-                            {post.author}
-                          </span>
-                          <span className="text-sm text-muted-foreground">
-                            {post.location}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            &middot; {post.time}
-                          </span>
-                        </div>
-                      </div>
-                      {post.pinned && (
-                        <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary shrink-0">
-                          Pinned
-                        </span>
-                      )}
-                    </div>
-
-                    <h3 className="mt-4 font-display text-base font-semibold text-foreground group-hover:text-primary transition-colors">
-                      {post.title}
-                    </h3>
-
-                    <div className="mt-3 flex items-center gap-5 text-sm text-muted-foreground">
-                      <span>{post.likes} likes</span>
-                      <span>{post.replies.length} replies</span>
-                    </div>
+        {items.length === 0 ? (
+          <div className="rounded-xl border border-border p-16 text-center">
+            <p className="text-sm text-muted-foreground">
+              No posts in this view yet.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {items.map((post) => (
+              <Link
+                key={post.id}
+                to={`/m/forum/${post.id}`}
+                className="group block rounded-xl border border-border transition-colors hover:border-border/80 hover:bg-muted/30"
+              >
+                {post.image && (
+                  <div className="overflow-hidden rounded-t-xl">
+                    <img
+                      src={post.image}
+                      alt=""
+                      className="aspect-21/9 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
                   </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
+                )}
+
+                <div className="px-6 py-5">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={post.home_photo}
+                      alt=""
+                      className="size-9 rounded-full object-cover shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-foreground">
+                          {post.author_name}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          {post.location}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          &middot; {post.time}
+                        </span>
+                      </div>
+                    </div>
+                    {post.pinned && (
+                      <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary shrink-0">
+                        Pinned
+                      </span>
+                    )}
+                  </div>
+
+                  <h3 className="mt-4 font-display text-base font-semibold text-foreground group-hover:text-primary transition-colors">
+                    {post.title}
+                  </h3>
+
+                  <div className="mt-3 flex items-center gap-5 text-sm text-muted-foreground">
+                    <span>{post.likes_count} likes</span>
+                    <span>{post.reply_count} replies</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {/* Sentinel + loading indicator */}
+        <div ref={sentinelRef} className="h-1" />
+        {isLoadingMore && (
+          <div className="flex justify-center py-8">
+            <Loader2 className="size-5 animate-spin text-muted-foreground" />
+          </div>
+        )}
       </div>
     </>
   );

@@ -135,6 +135,17 @@ function getPostLink(item: UnifiedPost) {
   }
 }
 
+function getEditLink(item: UnifiedPost) {
+  switch (item.type) {
+    case "blog":
+      return `/m/posts/edit-blog/${item.data.id}`;
+    case "forum":
+      return `/m/posts/edit-forum/${item.data.id}`;
+    case "marketplace":
+      return `/m/posts/edit-marketplace/${item.data.id}`;
+  }
+}
+
 function getPostLikes(item: UnifiedPost) {
   return item.data.likes_count;
 }
@@ -166,21 +177,20 @@ function getUniqueKey(item: UnifiedPost) {
 
 function PostCard({
   item,
-  activeTab,
   onDelete,
 }: {
   item: UnifiedPost;
-  activeTab: string;
   onDelete: (type: string, id: number) => void;
 }) {
   const link = getPostLink(item);
+  const editLink = getEditLink(item);
   const image = item.data.image;
   const Icon = getPostIcon(item.type);
 
   return (
     <div className="group flex items-start gap-5 px-6 py-5 transition-colors hover:bg-muted/30">
       {/* Thumbnail */}
-      <Link to={link} className="shrink-0">
+      <Link to={editLink} className="shrink-0">
         {image ? (
           <img src={image} alt="" className="size-20 rounded-lg object-cover" />
         ) : (
@@ -192,24 +202,14 @@ function PostCard({
 
       {/* Title + meta */}
       <div className="min-w-0 flex-1">
-        <Link to={link}>
+        <Link to={editLink}>
           <p className="font-display text-base font-semibold text-foreground group-hover:text-primary transition-colors truncate">
             {item.data.title}
           </p>
         </Link>
-        <div className="mt-1.5 flex items-center gap-2 text-sm text-muted-foreground">
-          <span>{item.data.time}</span>
-          {activeTab === "all" && (
-            <>
-              <span>&middot;</span>
-              <span className="text-xs text-muted-foreground/60">
-                {item.type === "blog" && "Blog"}
-                {item.type === "forum" && "Forum"}
-                {item.type === "marketplace" && "Marketplace"}
-              </span>
-            </>
-          )}
-        </div>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          {item.data.time}
+        </p>
       </div>
 
       {/* Stats + Actions */}
@@ -270,11 +270,9 @@ function PostCard({
 
 function PostList({
   items,
-  activeTab,
   onDelete,
 }: {
   items: UnifiedPost[];
-  activeTab: string;
   onDelete: (type: string, id: number) => void;
 }) {
   if (items.length === 0) {
@@ -293,7 +291,6 @@ function PostList({
         <PostCard
           key={getUniqueKey(item)}
           item={item}
-          activeTab={activeTab}
           onDelete={onDelete}
         />
       ))}
@@ -305,10 +302,10 @@ export default function MemberFeedPage({ loaderData }: Route.ComponentProps) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const deleteFetcher = useFetcher();
-  const activeTab = searchParams.get("tab") || "all";
+  const activeTab = searchParams.get("tab") || "blog";
   const setActiveTab = (value: string) => {
     const next = new URLSearchParams(searchParams);
-    if (value === "all") next.delete("tab");
+    if (value === "blog") next.delete("tab");
     else next.set("tab", value);
     setSearchParams(next, { replace: true });
   };
@@ -353,7 +350,7 @@ export default function MemberFeedPage({ loaderData }: Route.ComponentProps) {
   );
 
   const filtered = useMemo(
-    () => live.filter((item) => activeTab === "all" || item.type === activeTab),
+    () => live.filter((item) => item.type === activeTab),
     [live, activeTab],
   );
 
@@ -372,7 +369,6 @@ export default function MemberFeedPage({ loaderData }: Route.ComponentProps) {
           {/* Header row: tabs + new post dropdown */}
           <div className="flex items-center justify-between mb-6">
             <TabsList>
-              <TabsTrigger value="all">All</TabsTrigger>
               <TabsTrigger value="blog">Blog</TabsTrigger>
               <TabsTrigger value="forum">Forum</TabsTrigger>
               <TabsTrigger value="marketplace">Marketplace</TabsTrigger>
@@ -408,31 +404,21 @@ export default function MemberFeedPage({ loaderData }: Route.ComponentProps) {
             </DropdownMenu>
           </div>
 
-          <TabsContent value="all">
-            <PostList
-              items={filtered}
-              activeTab={activeTab}
-              onDelete={handleDelete}
-            />
-          </TabsContent>
           <TabsContent value="blog">
             <PostList
               items={filtered}
-              activeTab={activeTab}
               onDelete={handleDelete}
             />
           </TabsContent>
           <TabsContent value="forum">
             <PostList
               items={filtered}
-              activeTab={activeTab}
               onDelete={handleDelete}
             />
           </TabsContent>
           <TabsContent value="marketplace">
             <PostList
               items={filtered}
-              activeTab={activeTab}
               onDelete={handleDelete}
             />
           </TabsContent>

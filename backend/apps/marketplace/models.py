@@ -26,7 +26,7 @@ class Listing(models.Model):
     title = models.CharField(max_length=300)
     description = models.TextField()
     price = models.CharField(max_length=50, blank=True)
-    image = models.URLField(max_length=500, blank=True)
+    image = models.CharField(max_length=500, blank=True)
     condition = models.CharField(max_length=50, blank=True)
     tags = models.ManyToManyField(ListingTag, blank=True, related_name="listings")
     created_at = models.DateTimeField(auto_now_add=True)

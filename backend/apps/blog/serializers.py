@@ -66,4 +66,4 @@ class BlogPostDetailSerializer(BlogPostListSerializer):
 class BlogPostCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = BlogPost
-        fields = ["title", "content", "image"]
+        fields = ["id", "title", "content", "image"]

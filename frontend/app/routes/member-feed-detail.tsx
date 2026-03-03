@@ -215,13 +215,6 @@ export default function MemberFeedDetailPage({
           <RenderContent content={post.content} />
         </div>
 
-        {/* Image (from image field, if not already in block content) */}
-        {post.image && (
-          <div className="mt-6 overflow-hidden rounded-xl">
-            <img src={post.image} alt="" className="w-full object-cover" />
-          </div>
-        )}
-
         {/* Meta */}
         <div className="mt-6 flex items-center gap-4 text-sm text-muted-foreground">
           <button
@@ -306,7 +299,7 @@ export default function MemberFeedDetailPage({
               onClick={handleComment}
               disabled={!commentText.trim() || isCommenting}
             >
-              {isCommenting ? "Posting..." : "Comment"}
+              Comment
             </Button>
           </div>
         </div>

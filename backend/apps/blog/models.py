@@ -8,7 +8,7 @@ class BlogPost(models.Model):
     )
     title = models.CharField(max_length=300)
     content = models.TextField()
-    image = models.URLField(max_length=500, blank=True)
+    image = models.CharField(max_length=500, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

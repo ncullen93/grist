@@ -54,17 +54,18 @@ export async function action({ request }: Route.ActionArgs) {
     if (imgBlock) image = imgBlock.preview;
   } catch {}
 
+  const payload: Record<string, string> = { title, content };
+  if (image) payload.image = image;
+
   try {
-    const res = await apiPost(request, "/api/blog/posts/", {
-      title,
-      content,
-      image,
-    });
+    const res = await apiPost(request, "/api/blog/posts/", payload);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      return { error: err.detail || "Failed to create post." };
+      const msg = err.detail || Object.values(err).flat().join(" ") || "Failed to create post.";
+      return { error: msg };
     }
-    return redirect("/m/posts");
+    const created = await res.json();
+    return redirect(`/m/blog/${created.id}`);
   } catch {
     return { error: "Unable to connect to server." };
   }
@@ -154,7 +155,7 @@ export default function MemberPostsNewPage({
               onClick={handlePublish}
               disabled={!hasContent || isPublishing}
             >
-              {isPublishing ? "Publishing..." : "Publish"}
+              Publish
             </Button>
           </div>
           <p className="mt-3 text-sm text-muted-foreground">

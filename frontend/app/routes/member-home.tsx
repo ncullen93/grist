@@ -1,9 +1,15 @@
 import { useState } from "react";
-import { Link, useSearchParams } from "react-router";
-import { Heart, MessageCircle, Check, ChevronRight } from "lucide-react";
+import { Link, useSearchParams, useNavigate } from "react-router";
+import { Heart, MessageCircle, Check, ChevronRight, ChevronDown, FileText, MessageSquare, Store } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Progress } from "~/components/ui/progress";
 import { Button } from "~/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "~/components/ui/dropdown-menu";
 import { PageHeader } from "~/components/page-header";
 import {
   allMembers,
@@ -90,6 +96,7 @@ const allFeedItems = buildFeed();
 
 
 export default function MemberHomePage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const audience = (searchParams.get("tab") || "all") as AudienceType;
   const setAudience = (value: AudienceType) => {
@@ -214,13 +221,35 @@ export default function MemberHomePage() {
         </div>
 
         {/* Filter bar */}
-        <div className="sticky top-18 z-10 -mx-4 md:-mx-8 px-4 md:px-8 pt-6 pb-4 bg-background">
+        <div className="sticky top-18 z-10 -mx-4 md:-mx-8 px-4 md:px-8 pt-6 pb-4 bg-background flex items-center justify-between">
           <Tabs value={audience} onValueChange={(v) => setAudience(v as AudienceType)}>
             <TabsList>
               <TabsTrigger value="all">All</TabsTrigger>
               <TabsTrigger value="following">Following</TabsTrigger>
             </TabsList>
           </Tabs>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="gap-1.5">
+                New Post
+                <ChevronDown className="size-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onSelect={() => navigate("/m/posts/new-blog")}>
+                <FileText className="size-4" />
+                Blog
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => navigate("/m/posts/new-forum")}>
+                <MessageSquare className="size-4" />
+                Forum
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => navigate("/m/posts/new-marketplace")}>
+                <Store className="size-4" />
+                Marketplace
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Feed */}
