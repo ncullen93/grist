@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useFetcher } from "react-router";
 import { redirect } from "react-router";
-import { ArrowLeft } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { apiGet, apiPost } from "~/lib/api.server";
 import type { Route } from "./+types/member-forum-detail";
@@ -181,9 +180,8 @@ export default function MemberForumDetailPage({
         <div className="flex items-center gap-2 text-sm font-medium">
           <Link
             to="/m/forum"
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            className="text-muted-foreground hover:text-foreground transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" />
             Forum
           </Link>
           <span className="text-muted-foreground/50">/</span>

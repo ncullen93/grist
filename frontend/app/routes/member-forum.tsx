@@ -6,7 +6,6 @@ import {
   Plus,
   Loader2,
   MessageCircle,
-  ArrowLeft,
   ChevronRight,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
