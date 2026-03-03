@@ -31,6 +31,7 @@ export default [
     route("members", "routes/member-directory.tsx"),
     route("members/:slug", "routes/member-profile-detail.tsx"),
     route("profile", "routes/member-profile.tsx"),
+    route("profile/overview", "routes/member-profile-overview.tsx"),
     route("settings", "routes/member-settings.tsx"),
     route("posts", "routes/member-feed.tsx"),
     route("blog/:id", "routes/member-feed-detail.tsx"),

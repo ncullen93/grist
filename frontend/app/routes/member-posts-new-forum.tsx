@@ -244,9 +244,11 @@ export default function MemberPostsNewForumPage() {
           <p className="mt-3 text-sm text-muted-foreground">
             By Margaret H. &middot; Savannah, GA
           </p>
+        </div>
 
-          {/* Channel selector */}
-          <div className="mt-4 flex items-center gap-3">
+        {/* Channel selector */}
+        <div className="mt-4 rounded-xl border border-border bg-background px-6 py-4">
+          <div className="flex items-center gap-3">
             {allChannels.map((ch) => (
               <button
                 key={ch.slug}
@@ -264,8 +266,21 @@ export default function MemberPostsNewForumPage() {
         </div>
 
         {/* Content card */}
-        <div className="mt-4 rounded-xl border border-border bg-background p-6">
-          <div>
+        <div className="mt-4 rounded-xl border border-border bg-background">
+          {/* Toolbar */}
+          <div className="sticky top-18 z-10 flex items-center gap-2 border-b border-border bg-background px-6 py-5 rounded-t-xl">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              className="rounded-full gap-2"
+            >
+              <Plus className="size-4" />
+              Image
+            </Button>
+          </div>
+
+          <div className="p-6">
             {blocks.map((block, i) =>
               block.type === "text" ? (
                 <AutoGrowTextarea
@@ -326,19 +341,6 @@ export default function MemberPostsNewForumPage() {
                 </div>
               ),
             )}
-          </div>
-
-          {/* Add image button */}
-          <div className="mt-6 pt-6 border-t border-border">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              className="rounded-full gap-2"
-            >
-              <Plus className="size-4" />
-              Image
-            </Button>
           </div>
         </div>
       </div>

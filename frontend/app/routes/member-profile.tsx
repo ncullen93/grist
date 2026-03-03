@@ -1,45 +1,19 @@
 import { useState } from "react";
+import { Link } from "react-router";
+import { Pencil } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { PageHeader } from "~/components/page-header";
-
-const interestOptions = [
-  "Restoration",
-  "Windows",
-  "Gardens",
-  "Tax Credits",
-  "Plaster & Masonry",
-  "Lead Paint",
-  "Insurance",
-  "Foundations",
-  "Roofing",
-  "Kitchens",
-];
 
 export default function MyProfilePage() {
   const [name, setName] = useState("Guest Member");
   const [location, setLocation] = useState("Brewster, MA");
-  const [bio, setBio] = useState(
-    "Owner of a 1905 Colonial Revival in Brewster. Passionate about preserving the character of historic homes while making them livable for modern families.",
-  );
   const [homeName, setHomeName] = useState("The Demo House");
   const [homeYear, setHomeYear] = useState("1905");
   const [homeStyle, setHomeStyle] = useState("Colonial Revival");
   const [registry, setRegistry] = useState(
     "Cape Cod Commission Historic Inventory",
   );
-  const [interests, setInterests] = useState([
-    "Restoration",
-    "Windows",
-    "Gardens",
-    "Tax Credits",
-  ]);
   const [profileSaved, setProfileSaved] = useState(false);
-
-  const toggleInterest = (tag: string) => {
-    setInterests((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
-    );
-  };
 
   const handleProfileSave = () => {
     setProfileSaved(true);
@@ -101,12 +75,13 @@ export default function MyProfilePage() {
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-2.5">
                 Bio
               </label>
-              <textarea
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                rows={3}
-                className="rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary/30 resize-none"
-              />
+              <Link
+                to="/m/profile/overview"
+                className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors w-fit"
+              >
+                <Pencil className="size-3.5" />
+                Edit
+              </Link>
             </div>
           </div>
         </div>
@@ -162,32 +137,6 @@ export default function MyProfilePage() {
                 onChange={(e) => setRegistry(e.target.value)}
                 className="rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary/30"
               />
-            </div>
-          </div>
-        </div>
-
-        {/* Interests */}
-        <div className="mt-8 rounded-lg border border-border overflow-hidden">
-          <div className="px-6 py-4 border-b border-border bg-sidebar">
-            <h3 className="text-sm font-semibold text-foreground">
-              Interests
-            </h3>
-          </div>
-          <div className="px-6 py-5">
-            <div className="flex flex-wrap gap-2">
-              {interestOptions.map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => toggleInterest(tag)}
-                  className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
-                    interests.includes(tag)
-                      ? "bg-primary text-primary-foreground"
-                      : "border border-border text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {tag}
-                </button>
-              ))}
             </div>
           </div>
         </div>

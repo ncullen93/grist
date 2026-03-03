@@ -122,30 +122,16 @@ export default function MemberProfileDetailPage({
               </div>
             </div>
 
-            {/* Bio */}
+            {/* Overview */}
             <div className="mt-8">
-              <p className="text-[15px] leading-relaxed text-muted-foreground">
-                {member.bio}
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {member.tags.map((tag) => (
-                  <Link
-                    key={tag}
-                    to={`/m/members?search=${encodeURIComponent(tag)}`}
-                    className="rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-                  >
-                    {tag}
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            {/* Story */}
-            <div className="mt-12">
               <h2 className="font-display text-2xl font-semibold text-foreground">
                 {member.homeName}
               </h2>
               <div className="mt-6 space-y-6">
+                <p className="text-[15px] leading-relaxed text-muted-foreground">
+                  {member.bio}
+                </p>
+
                 {member.story.map((paragraph, i) => (
                   <p
                     key={i}
@@ -158,8 +144,20 @@ export default function MemberProfileDetailPage({
                 <img
                   src={member.photo.replace("w=600&h=600", "w=800&h=500")}
                   alt={member.homeName}
-                  className="mt-6 aspect-3/2 w-full rounded-md object-cover"
+                  className="aspect-3/2 w-full rounded-xl object-cover"
                 />
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-2">
+                {member.tags.map((tag) => (
+                  <Link
+                    key={tag}
+                    to={`/m/members?search=${encodeURIComponent(tag)}`}
+                    className="rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                  >
+                    {tag}
+                  </Link>
+                ))}
               </div>
             </div>
           </TabsContent>

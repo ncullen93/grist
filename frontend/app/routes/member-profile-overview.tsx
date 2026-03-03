@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router";
-import { Plus, X } from "lucide-react";
+import { Link } from "react-router";
+import { ArrowLeft, Plus, X } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { PageHeader } from "~/components/page-header";
 
 type Block =
   | { id: number; type: "text"; content: string }
@@ -14,13 +13,32 @@ function newId() {
   return ++_blockId;
 }
 
-export default function MemberPostsNewPage() {
-  const navigate = useNavigate();
-  const [title, setTitle] = useState("");
-  const [blocks, setBlocks] = useState<Block[]>([
-    { id: newId(), type: "text", content: "" },
-  ]);
+// Demo content to pre-populate
+const demoBlocks: Block[] = [
+  {
+    id: newId(),
+    type: "text",
+    content:
+      "Owner of a 1905 Colonial Revival in Brewster. Passionate about preserving the character of historic homes while making them livable for modern families.\n\nWe purchased The Demo House in 2019, drawn in by the original hardwood floors, the wrap-around porch, and the sprawling backyard that backs up to a cranberry bog. The previous owners had done some updates over the years — a new roof in 2010, updated electrical — but much of the home's original character remained intact.",
+  },
+  {
+    id: newId(),
+    type: "image",
+    preview:
+      "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=900&h=500&fit=crop",
+  },
+  {
+    id: newId(),
+    type: "text",
+    content:
+      "Our first major project was restoring the original windows. The house has 32 windows, each with the original wavy glass panes. Rather than replacing them, we worked with a local craftsman to repair the sashes, add weatherstripping, and install interior storm windows. It was more expensive than replacement vinyl, but the character is irreplaceable.\n\nWe've since tackled the kitchen — keeping the original butler's pantry layout but updating the appliances and countertops — and are currently working on restoring the plaster walls in the upstairs bedrooms.",
+  },
+];
+
+export default function MemberProfileOverviewPage() {
+  const [blocks, setBlocks] = useState<Block[]>(demoBlocks);
   const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
+  const [saved, setSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeBlockId = useRef<number | null>(null);
   const activeCursorPos = useRef<number>(0);
@@ -40,7 +58,6 @@ export default function MemberPostsNewPage() {
       if (filtered.length === 0) {
         return [{ id: newId(), type: "text" as const, content: "" }];
       }
-      // Merge adjacent text blocks
       const merged: Block[] = [];
       for (const block of filtered) {
         const last = merged[merged.length - 1];
@@ -65,25 +82,25 @@ export default function MemberPostsNewPage() {
     }
   }, []);
 
-  // Focus a text block at a specific position
-  const focusTextBlock = useCallback((blockId: number, pos: "start" | "end") => {
-    requestAnimationFrame(() => {
-      const el = textareaEls.current.get(blockId);
-      if (el) {
-        el.focus();
-        const p = pos === "start" ? 0 : el.value.length;
-        el.setSelectionRange(p, p);
-      }
-    });
-  }, []);
+  const focusTextBlock = useCallback(
+    (blockId: number, pos: "start" | "end") => {
+      requestAnimationFrame(() => {
+        const el = textareaEls.current.get(blockId);
+        if (el) {
+          el.focus();
+          const p = pos === "start" ? 0 : el.value.length;
+          el.setSelectionRange(p, p);
+        }
+      });
+    },
+    [],
+  );
 
-  // Handle arrow keys in textareas to navigate across image blocks
   const handleTextareaKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>, blockId: number) => {
       const el = e.currentTarget;
       const pos = el.selectionStart;
 
-      // ArrowDown on the last line (no newline after cursor)
       if (e.key === "ArrowDown" && el.value.indexOf("\n", pos) === -1) {
         const idx = blocks.findIndex((b) => b.id === blockId);
         const next = blocks[idx + 1];
@@ -94,8 +111,10 @@ export default function MemberPostsNewPage() {
         }
       }
 
-      // ArrowUp when cursor is at position 0, or on the first line (no newline before cursor)
-      if (e.key === "ArrowUp" && (pos === 0 || el.value.lastIndexOf("\n", pos - 1) === -1)) {
+      if (
+        e.key === "ArrowUp" &&
+        (pos === 0 || el.value.lastIndexOf("\n", pos - 1) === -1)
+      ) {
         const idx = blocks.findIndex((b) => b.id === blockId);
         const prev = blocks[idx - 1];
         if (prev?.type === "image") {
@@ -108,7 +127,6 @@ export default function MemberPostsNewPage() {
     [blocks],
   );
 
-  // Handle keys on a selected image
   const handleImageKeyDown = useCallback(
     (e: React.KeyboardEvent, blockId: number) => {
       const idx = blocks.findIndex((b) => b.id === blockId);
@@ -133,7 +151,6 @@ export default function MemberPostsNewPage() {
 
       if (e.key === "Backspace" || e.key === "Delete") {
         e.preventDefault();
-        // Focus the text block before or after
         const prev = blocks[idx - 1];
         const next = blocks[idx + 1];
         if (prev?.type === "text") {
@@ -156,7 +173,9 @@ export default function MemberPostsNewPage() {
     const cursorPos = activeCursorPos.current;
 
     setBlocks((prev) => {
-      const idx = prev.findIndex((b) => b.id === focusedId && b.type === "text");
+      const idx = prev.findIndex(
+        (b) => b.id === focusedId && b.type === "text",
+      );
 
       if (idx === -1) {
         const afterId = newId();
@@ -182,7 +201,6 @@ export default function MemberPostsNewPage() {
       const result = [...prev];
       result.splice(idx, 1, ...newBlocks);
 
-      // Focus the text block after the image
       requestAnimationFrame(() => {
         const el = textareaEls.current.get(afterId);
         if (el) {
@@ -197,21 +215,22 @@ export default function MemberPostsNewPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const hasContent =
-    title.trim() !== "" &&
-    blocks.some(
-      (b) =>
-        (b.type === "text" && b.content.trim() !== "") || b.type === "image",
-    );
-
-  const handlePublish = () => {
-    if (!hasContent) return;
-    navigate("/m/posts");
+  const handleSave = () => {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
   return (
     <>
-      <PageHeader title="New Blog Post" />
+      <header className="px-4 md:px-8 h-18 flex items-center bg-background shrink-0 border-b border-border sticky top-0 z-10">
+        <Link
+          to="/m/profile"
+          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Profile
+        </Link>
+      </header>
       <div className="max-w-4xl mx-auto px-4 md:px-8 pt-8 pb-48">
         {/* Hidden file input */}
         <Input
@@ -222,28 +241,24 @@ export default function MemberPostsNewPage() {
           onChange={handleImageSelect}
         />
 
-        {/* Header card */}
+        {/* Header */}
         <div className="rounded-xl border border-border bg-background p-6">
-          <div className="flex items-center gap-4">
-            <Input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Title"
-              className="text-3xl! h-auto min-w-0 flex-1 border-0 bg-transparent px-0 py-0 font-display font-semibold shadow-none focus-visible:ring-0 focus-visible:border-0"
-              autoFocus
-            />
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h1 className="font-display text-xl font-semibold text-foreground">
+                Overview
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                This will appear on your member profile page.
+              </p>
+            </div>
             <Button
               className="rounded-full px-8 shrink-0"
-              onClick={handlePublish}
-              disabled={!hasContent}
+              onClick={handleSave}
             >
-              Publish
+              {saved ? "Saved!" : "Save"}
             </Button>
           </div>
-          <p className="mt-3 text-sm text-muted-foreground">
-            By Margaret H. &middot; Brewster, MA
-          </p>
         </div>
 
         {/* Content card */}
@@ -276,7 +291,7 @@ export default function MemberPostsNewPage() {
                     else textareaEls.current.delete(block.id);
                   }}
                   isFirst={i === 0 && blocks.every((b) => b.type === "text")}
-                  placeholder={i === 0 ? "Start writing..." : ""}
+                  placeholder={i === 0 ? "Write about yourself and your home..." : ""}
                 />
               ) : (
                 <div
@@ -292,11 +307,13 @@ export default function MemberPostsNewPage() {
                     imageEls.current.get(block.id)?.focus();
                   }}
                   onFocus={() => setSelectedImageId(block.id)}
-                  onBlur={() => setSelectedImageId((cur) => cur === block.id ? null : cur)}
+                  onBlur={() =>
+                    setSelectedImageId((cur) =>
+                      cur === block.id ? null : cur,
+                    )
+                  }
                   className={`relative rounded-xl overflow-hidden outline-none transition-shadow my-4 ${
-                    selectedImageId === block.id
-                      ? "ring-2 ring-primary"
-                      : ""
+                    selectedImageId === block.id ? "ring-2 ring-primary" : ""
                   }`}
                 >
                   <img
@@ -312,7 +329,9 @@ export default function MemberPostsNewPage() {
                       removeBlock(block.id);
                     }}
                     className={`absolute top-3 right-3 size-8 rounded-full bg-black/50 text-white hover:bg-black/70 transition-opacity ${
-                      selectedImageId === block.id ? "opacity-100" : "opacity-0 pointer-events-none"
+                      selectedImageId === block.id
+                        ? "opacity-100"
+                        : "opacity-0 pointer-events-none"
                     }`}
                   >
                     <X className="size-4" />
@@ -352,7 +371,8 @@ function AutoGrowTextarea({
     if (ref.current) {
       ref.current.style.height = "auto";
       const minH = isFirst ? 160 : 0;
-      ref.current.style.height = Math.max(ref.current.scrollHeight, minH) + "px";
+      ref.current.style.height =
+        Math.max(ref.current.scrollHeight, minH) + "px";
     }
   }, [value, isFirst]);
 

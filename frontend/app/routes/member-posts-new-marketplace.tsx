@@ -106,9 +106,11 @@ export default function MemberPostsNewMarketplacePage() {
           <p className="mt-3 text-sm text-muted-foreground">
             By Margaret H. &middot; Savannah, GA
           </p>
+        </div>
 
-          {/* Category + Price row */}
-          <div className="mt-4 flex items-center justify-between">
+        {/* Category + Price */}
+        <div className="mt-4 rounded-xl border border-border bg-background px-6 py-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {categories.map((cat) => (
                 <button
