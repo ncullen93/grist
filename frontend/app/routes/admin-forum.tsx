@@ -10,14 +10,14 @@ import {
   TabsContent,
 } from "~/components/ui/tabs";
 import { Button } from "~/components/ui/button";
-import { Trash2, Plus, Pencil, Pin } from "lucide-react";
+import { Trash2, Plus, Pencil, Pin, PinOff } from "lucide-react";
+import toast from "react-hot-toast";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const [meRes, postsRes, channelsRes, topicsRes] = await Promise.all([
+  const [meRes, postsRes, channelsRes] = await Promise.all([
     apiGet(request, "/api/auth/me/"),
     apiGet(request, "/api/forum/posts/"),
     apiGet(request, "/api/forum/channels/"),
-    apiGet(request, "/api/forum/topics/"),
   ]);
 
   if (!meRes.ok) return redirect("/login");
@@ -26,12 +26,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   const postsData = await postsRes.json();
   const channelsData = await channelsRes.json();
-  const topicsData = await topicsRes.json();
 
   return {
     posts: postsData.results ?? postsData,
     channels: Array.isArray(channelsData) ? channelsData : channelsData.results ?? [],
-    topics: Array.isArray(topicsData) ? topicsData : topicsData.results ?? [],
   };
 }
 
@@ -43,6 +41,13 @@ export async function action({ request }: Route.ActionArgs) {
     const postId = formData.get("postId") as string;
     await apiDelete(request, `/api/forum/posts/${postId}/`);
     return { ok: true };
+  }
+
+  if (intent === "toggle-pin") {
+    const postId = formData.get("postId") as string;
+    const pinned = formData.get("pinned") === "true";
+    await apiPatch(request, `/api/forum/posts/${postId}/`, { pinned });
+    return { ok: true, pinned };
   }
 
   if (intent === "create-channel") {
@@ -64,25 +69,6 @@ export async function action({ request }: Route.ActionArgs) {
     return { ok: true };
   }
 
-  if (intent === "create-topic") {
-    const name = formData.get("name") as string;
-    await apiPost(request, "/api/forum/topics/", { name, slug: name.toLowerCase().replace(/\s+/g, "-") });
-    return { ok: true };
-  }
-
-  if (intent === "delete-topic") {
-    const topicId = formData.get("topicId") as string;
-    await apiDelete(request, `/api/forum/topics/${topicId}/`);
-    return { ok: true };
-  }
-
-  if (intent === "update-topic") {
-    const topicId = formData.get("topicId") as string;
-    const name = formData.get("name") as string;
-    await apiPatch(request, `/api/forum/topics/${topicId}/`, { name });
-    return { ok: true };
-  }
-
   return { ok: false };
 }
 
@@ -98,7 +84,6 @@ type ForumPost = {
 };
 
 type Channel = { id: number; name: string; slug: string; sort_order: number };
-type Topic = { id: number; name: string; slug: string };
 
 function InlineItemManager({
   items,
@@ -206,8 +191,92 @@ function InlineItemManager({
   );
 }
 
+function PostCard({ post }: { post: ForumPost }) {
+  const fetcher = useFetcher();
+
+  const handleDelete = () => {
+    if (!confirm(`Delete "${post.title}"? This cannot be undone.`)) return;
+    fetcher.submit(
+      { intent: "delete-post", postId: String(post.id) },
+      { method: "post" },
+    );
+  };
+
+  const handleTogglePin = () => {
+    fetcher.submit(
+      {
+        intent: "toggle-pin",
+        postId: String(post.id),
+        pinned: String(!post.pinned),
+      },
+      { method: "post" },
+    );
+    toast.success(post.pinned ? "Unpinned" : "Pinned");
+  };
+
+  return (
+    <div className="rounded-xl border border-border px-6 py-5 flex items-start justify-between gap-4">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2.5">
+          {post.pinned && (
+            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-primary shrink-0">
+              Pinned
+            </span>
+          )}
+          <Link
+            to={`/m/forum/${post.id}`}
+            className="font-display text-base font-semibold text-foreground hover:text-primary transition-colors line-clamp-1"
+          >
+            {post.title}
+          </Link>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          <span>{post.author_name}</span>
+          <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium">
+            {post.channel_name}
+          </span>
+          <span>{post.likes_count} likes</span>
+          <span>{post.reply_count} replies</span>
+          <span>{post.time}</span>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          onClick={handleTogglePin}
+          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+            post.pinned
+              ? "border-primary/30 text-primary hover:bg-primary/5"
+              : "border-border text-muted-foreground hover:text-foreground hover:border-border/80"
+          }`}
+          title={post.pinned ? "Unpin thread" : "Pin thread"}
+        >
+          {post.pinned ? (
+            <>
+              <PinOff className="size-3.5" />
+              Unpin
+            </>
+          ) : (
+            <>
+              <Pin className="size-3.5" />
+              Pin
+            </>
+          )}
+        </button>
+        <button
+          onClick={handleDelete}
+          className="inline-flex items-center rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-destructive/70 hover:text-destructive hover:border-destructive/30 transition-colors cursor-pointer"
+          title="Delete"
+        >
+          <Trash2 className="size-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminForumPage({ loaderData }: Route.ComponentProps) {
-  const { posts, channels, topics } = loaderData;
+  const { posts, channels } = loaderData;
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "posts";
   const setActiveTab = (value: string) => {
@@ -215,12 +284,6 @@ export default function AdminForumPage({ loaderData }: Route.ComponentProps) {
     if (value === "posts") next.delete("tab");
     else next.set("tab", value);
     setSearchParams(next, { replace: true });
-  };
-  const fetcher = useFetcher();
-
-  const handleDeletePost = (id: number, title: string) => {
-    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
-    fetcher.submit({ intent: "delete-post", postId: String(id) }, { method: "post" });
   };
 
   return (
@@ -239,73 +302,18 @@ export default function AdminForumPage({ loaderData }: Route.ComponentProps) {
           <TabsList>
             <TabsTrigger value="posts">Posts ({posts.length})</TabsTrigger>
             <TabsTrigger value="channels">Channels ({channels.length})</TabsTrigger>
-            <TabsTrigger value="topics">Topics ({topics.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="posts">
             {posts.length === 0 ? (
-              <div className="mt-6 rounded-lg border border-border p-16 text-center">
+              <div className="mt-6 rounded-xl border border-border p-16 text-center">
                 <p className="text-sm text-muted-foreground">No forum posts yet.</p>
               </div>
             ) : (
-              <div className="mt-6 rounded-lg border border-border overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-sidebar border-b border-border">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Title
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground hidden sm:table-cell">
-                        Author
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground hidden md:table-cell">
-                        Channel
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground hidden md:table-cell">
-                        Date
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {posts.map((post: ForumPost) => (
-                      <tr key={post.id} className="border-b border-border last:border-0">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            {post.pinned && <Pin className="size-3 text-primary shrink-0" />}
-                            <span className="font-medium">{post.title}</span>
-                          </div>
-                          <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                            <span>{post.likes_count} likes</span>
-                            <span>{post.reply_count} replies</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-muted-foreground hidden sm:table-cell">
-                          {post.author_name}
-                        </td>
-                        <td className="px-6 py-4 hidden md:table-cell">
-                          <span className="inline-flex rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                            {post.channel_name}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-muted-foreground hidden md:table-cell">
-                          {post.time}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <button
-                            onClick={() => handleDeletePost(post.id, post.title)}
-                            className="inline-flex items-center text-destructive/70 hover:text-destructive transition-colors cursor-pointer"
-                            title="Delete"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="mt-6 space-y-3">
+                {posts.map((post: ForumPost) => (
+                  <PostCard key={post.id} post={post} />
+                ))}
               </div>
             )}
           </TabsContent>
@@ -319,14 +327,6 @@ export default function AdminForumPage({ loaderData }: Route.ComponentProps) {
             />
           </TabsContent>
 
-          <TabsContent value="topics">
-            <InlineItemManager
-              items={topics}
-              label="Topic"
-              intentPrefix="topic"
-              idField="topicId"
-            />
-          </TabsContent>
         </Tabs>
       </div>
     </>

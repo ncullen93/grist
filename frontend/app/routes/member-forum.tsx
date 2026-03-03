@@ -1,7 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useFetcher, useSearchParams } from "react-router";
 import { redirect } from "react-router";
-import { Search, SlidersHorizontal, Plus, Loader2 } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Loader2,
+  MessageCircle,
+  ArrowLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { PageHeader } from "~/components/page-header";
@@ -12,12 +19,9 @@ interface Channel {
   id: number;
   name: string;
   slug: string;
-}
-
-interface Topic {
-  id: number;
-  name: string;
-  slug: string;
+  post_count: number;
+  latest_post_title: string | null;
+  latest_activity: string | null;
 }
 
 interface ForumPostItem {
@@ -28,7 +32,6 @@ interface ForumPostItem {
   home_photo: string;
   channel_name: string;
   channel_slug: string;
-  topic_names: string[];
   title: string;
   body: string;
   image: string;
@@ -37,6 +40,8 @@ interface ForumPostItem {
   reply_count: number;
   time: string;
   created_at: string;
+  last_reply_time: string | null;
+  last_reply_author_name: string | null;
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -44,79 +49,74 @@ export async function loader({ request }: Route.LoaderArgs) {
   const page = url.searchParams.get("page") || "1";
   const search = url.searchParams.get("search") || "";
   const channel = url.searchParams.get("channel") || "";
-  const topic = url.searchParams.get("topic") || "";
 
   const params = new URLSearchParams();
   params.set("page", page);
   if (search) params.set("search", search);
   if (channel) params.set("channel", channel);
-  if (topic) params.set("topic", topic);
 
   try {
-    const [postsRes, channelsRes, topicsRes] = await Promise.all([
+    const [postsRes, channelsRes] = await Promise.all([
       apiGet(request, `/api/forum/posts/?${params}`),
       apiGet(request, "/api/forum/channels/"),
-      apiGet(request, "/api/forum/topics/"),
     ]);
     if (!postsRes.ok) return redirect("/login");
     const postsData = await postsRes.json();
-    const channelsData = channelsRes.ok ? await channelsRes.json() : { results: [] };
-    const topicsData = topicsRes.ok ? await topicsRes.json() : { results: [] };
+    const channelsData = channelsRes.ok
+      ? await channelsRes.json()
+      : { results: [] };
     return {
       results: postsData.results as ForumPostItem[],
       nextPage: postsData.next ? String(Number(page) + 1) : null,
       page: Number(page),
       channels: (channelsData.results ?? channelsData) as Channel[],
-      topics: (topicsData.results ?? topicsData) as Topic[],
     };
   } catch {
     return redirect("/login");
   }
 }
 
-export default function MemberForumPage({ loaderData }: Route.ComponentProps) {
+export default function MemberForumPage({
+  loaderData,
+}: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchInput, setSearchInput] = useState(
     searchParams.get("search") || "",
   );
-  const [items, setItems] = useState(loaderData.results);
+  // Extra pages appended via infinite scroll (kept separate from loaderData)
+  const [extraItems, setExtraItems] = useState<ForumPostItem[]>([]);
   const [nextPage, setNextPage] = useState(loaderData.nextPage);
-  const [showFilter, setShowFilter] = useState(false);
-  const filterRef = useRef<HTMLDivElement>(null);
   const fetcher = useFetcher({});
   const sentinelRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const activeChannel = searchParams.get("channel") || "";
-  const activeTopic = searchParams.get("topic") || "";
-  const activeFilterCount = (activeChannel ? 1 : 0) + (activeTopic ? 1 : 0);
+  const activeSearch = searchParams.get("search") || "";
 
-  // Reset when loaderData changes
+  // Show threads when a channel or search is active
+  const showThreads = !!activeChannel || !!activeSearch;
+
+  // Find active channel for the header
+  const activeChannelObj = loaderData.channels.find(
+    (ch) => ch.slug === activeChannel,
+  );
+
+  // Combine loader results with any infinite-scroll pages
+  const items = [...loaderData.results, ...extraItems];
+
+  // Reset extra items when loaderData changes (new navigation/filter)
   useEffect(() => {
-    setItems(loaderData.results);
+    setExtraItems([]);
     setNextPage(loaderData.nextPage);
   }, [loaderData]);
 
   // Append fetcher results for infinite scroll
   useEffect(() => {
     if (fetcher.data?.results) {
-      setItems((prev) => [...prev, ...fetcher.data.results]);
+      setExtraItems((prev) => [...prev, ...fetcher.data.results]);
       setNextPage(fetcher.data.nextPage);
     }
   }, [fetcher.data]);
-
-  // Close filter on outside click
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
-        setShowFilter(false);
-      }
-    }
-    if (showFilter) {
-      document.addEventListener("mousedown", handleClick);
-      return () => document.removeEventListener("mousedown", handleClick);
-    }
-  }, [showFilter]);
 
   // IntersectionObserver for infinite scroll
   const loadMore = useCallback(() => {
@@ -128,7 +128,7 @@ export default function MemberForumPage({ loaderData }: Route.ComponentProps) {
 
   useEffect(() => {
     const el = sentinelRef.current;
-    if (!el) return;
+    if (!el || !showThreads) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) loadMore();
@@ -137,7 +137,7 @@ export default function MemberForumPage({ loaderData }: Route.ComponentProps) {
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [loadMore]);
+  }, [loadMore, showThreads]);
 
   // Debounced search
   const handleSearchChange = (value: string) => {
@@ -152,125 +152,40 @@ export default function MemberForumPage({ loaderData }: Route.ComponentProps) {
     }, 300);
   };
 
-  const setFilter = (key: string, value: string | null) => {
-    const next = new URLSearchParams(searchParams);
-    next.delete("page");
-    if (value) next.set(key, value);
-    else next.delete(key);
-    setSearchParams(next, { replace: true });
-  };
-
   const isLoadingMore = fetcher.state === "loading";
 
   return (
     <>
-      <PageHeader title="Forum" />
+      {/* Header changes based on whether we're in a channel */}
+      {showThreads && activeChannelObj ? (
+        <header className="px-4 md:px-8 h-18 flex items-center bg-background shrink-0 border-b border-border sticky top-0 z-10">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Link
+              to="/m/forum"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Forum
+            </Link>
+            <span className="text-muted-foreground/50">/</span>
+            <span className="text-foreground">{activeChannelObj.name}</span>
+          </div>
+        </header>
+      ) : (
+        <PageHeader title="Forum" />
+      )}
 
-      <div className="bg-background">
-        <div className="max-w-4xl mx-auto flex items-center gap-3 px-4 md:px-8 py-8">
-          <div className="flex flex-1 items-center rounded-lg border border-border bg-background px-4 py-2.5">
+      <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
+        {/* Search + New Thread */}
+        <div className="flex items-center gap-3">
+          <div className="flex flex-1 items-center rounded-lg border border-border bg-background px-4 py-3">
             <Search className="mr-3 size-4 shrink-0 text-muted-foreground" />
             <Input
               type="text"
               value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Search..."
-              className="h-auto border-0 bg-transparent px-0 py-0 shadow-none focus-visible:ring-0 focus-visible:border-0"
+              placeholder="Search threads..."
+              className="h-auto border-0 bg-transparent px-0 py-0 text-base shadow-none focus-visible:ring-0 focus-visible:border-0"
             />
-          </div>
-          <div className="relative" ref={filterRef}>
-            <button
-              onClick={() => setShowFilter(!showFilter)}
-              className={`flex items-center gap-2 rounded-lg border px-5 py-2.5 text-sm transition-colors ${
-                activeFilterCount > 0
-                  ? "border-primary text-primary"
-                  : "border-border text-muted-foreground hover:bg-muted/50"
-              }`}
-            >
-              <SlidersHorizontal className="size-4" />
-              Filter
-              {activeFilterCount > 0 && (
-                <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
-                  {activeFilterCount}
-                </span>
-              )}
-            </button>
-            {showFilter && (
-              <div className="absolute right-0 mt-2 w-72 rounded-xl border border-border bg-background p-4 shadow-lg z-30">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm font-semibold text-foreground">
-                    Filters
-                  </span>
-                  {activeFilterCount > 0 && (
-                    <button
-                      onClick={() => {
-                        setFilter("channel", null);
-                        setFilter("topic", null);
-                      }}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      Clear all
-                    </button>
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  {/* Channel */}
-                  <div>
-                    <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Channel
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {loaderData.channels.map((ch) => (
-                        <button
-                          key={ch.slug}
-                          onClick={() =>
-                            setFilter(
-                              "channel",
-                              activeChannel === ch.slug ? null : ch.slug,
-                            )
-                          }
-                          className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                            activeChannel === ch.slug
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-muted-foreground hover:bg-muted/80"
-                          }`}
-                        >
-                          {ch.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Topic */}
-                  <div>
-                    <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Topic
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {loaderData.topics.map((t) => (
-                        <button
-                          key={t.slug}
-                          onClick={() =>
-                            setFilter(
-                              "topic",
-                              activeTopic === t.slug ? null : t.slug,
-                            )
-                          }
-                          className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                            activeTopic === t.slug
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-muted-foreground hover:bg-muted/80"
-                          }`}
-                        >
-                          {t.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
           <Button asChild className="rounded-lg">
             <Link to="/m/posts/new-forum">
@@ -279,82 +194,153 @@ export default function MemberForumPage({ loaderData }: Route.ComponentProps) {
             </Link>
           </Button>
         </div>
-      </div>
 
-      <div className="max-w-4xl mx-auto px-4 md:px-8 pb-8">
-        {items.length === 0 ? (
-          <div className="rounded-xl border border-border p-16 text-center">
-            <p className="text-sm text-muted-foreground">
-              No posts in this view yet.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {items.map((post) => (
+        {/* Channel switcher — show when inside a channel */}
+        {showThreads && loaderData.channels.length > 0 && (
+          <div className="mt-5 flex flex-wrap gap-2">
+            {loaderData.channels.map((ch) => (
               <Link
-                key={post.id}
-                to={`/m/forum/${post.id}`}
-                className="group block rounded-xl border border-border transition-colors hover:border-border/80 hover:bg-muted/30"
+                key={ch.slug}
+                to={`/m/forum?channel=${ch.slug}`}
+                className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                  activeChannel === ch.slug
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
               >
-                {post.image && (
-                  <div className="overflow-hidden rounded-t-xl">
-                    <img
-                      src={post.image}
-                      alt=""
-                      className="aspect-21/9 w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </div>
-                )}
-
-                <div className="px-6 py-5">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={post.home_photo}
-                      alt=""
-                      className="size-9 rounded-full object-cover shrink-0"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-foreground">
-                          {post.author_name}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          {post.location}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          &middot; {post.time}
-                        </span>
-                      </div>
-                    </div>
-                    {post.pinned && (
-                      <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary shrink-0">
-                        Pinned
-                      </span>
-                    )}
-                  </div>
-
-                  <h3 className="mt-4 font-display text-base font-semibold text-foreground group-hover:text-primary transition-colors">
-                    {post.title}
-                  </h3>
-
-                  <div className="mt-3 flex items-center gap-5 text-sm text-muted-foreground">
-                    <span>{post.likes_count} likes</span>
-                    <span>{post.reply_count} replies</span>
-                  </div>
-                </div>
+                {ch.name}
               </Link>
             ))}
           </div>
         )}
 
-        {/* Sentinel + loading indicator */}
-        <div ref={sentinelRef} className="h-1" />
-        {isLoadingMore && (
-          <div className="flex justify-center py-8">
-            <Loader2 className="size-5 animate-spin text-muted-foreground" />
-          </div>
-        )}
+        {/* Main content */}
+        <div className="mt-6">
+          {!showThreads ? (
+            <ChannelDirectory channels={loaderData.channels} />
+          ) : (
+            <>
+              <ThreadList items={items} showChannel={!activeChannel} />
+
+              {/* Sentinel + loading indicator */}
+              <div ref={sentinelRef} className="h-1" />
+              {isLoadingMore && (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </>
+  );
+}
+
+/* ─── Channel Directory ─── */
+
+function ChannelDirectory({ channels }: { channels: Channel[] }) {
+  if (channels.length === 0) {
+    return (
+      <div className="rounded-xl border border-border p-16 text-center">
+        <p className="text-base text-muted-foreground">
+          No channels have been created yet.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {channels.map((ch) => (
+        <Link
+          key={ch.slug}
+          to={`/m/forum?channel=${ch.slug}`}
+          className="flex items-center justify-between rounded-xl border border-border px-7 py-6 transition-colors hover:bg-muted/30 group"
+        >
+          <div className="min-w-0 flex-1">
+            <h3 className="font-display text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+              {ch.name}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {ch.post_count} {ch.post_count === 1 ? "thread" : "threads"}
+              {ch.latest_activity && (
+                <span> &middot; Last active {ch.latest_activity}</span>
+              )}
+            </p>
+            {ch.latest_post_title && (
+              <p className="mt-2 text-sm text-muted-foreground truncate">
+                Latest: {ch.latest_post_title}
+              </p>
+            )}
+          </div>
+          <ChevronRight className="size-5 text-muted-foreground/50 shrink-0 ml-4 group-hover:text-muted-foreground transition-colors" />
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Thread List ─── */
+
+function ThreadList({
+  items,
+  showChannel,
+}: {
+  items: ForumPostItem[];
+  showChannel: boolean;
+}) {
+  if (items.length === 0) {
+    return (
+      <div className="rounded-xl border border-border p-16 text-center">
+        <p className="text-base text-muted-foreground">
+          No threads in this view yet.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((post) => (
+        <Link
+          key={post.id}
+          to={`/m/forum/${post.id}`}
+          className="block rounded-xl border border-border px-6 py-5 transition-colors hover:bg-muted/30 group"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              {/* Title row */}
+              <div className="flex items-center gap-2.5">
+                {post.pinned && (
+                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-primary shrink-0">
+                    Pinned
+                  </span>
+                )}
+                <h3 className="font-display text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                  {post.title}
+                </h3>
+              </div>
+
+              {/* Meta line */}
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                <span>{post.author_name}</span>
+                {showChannel && (
+                  <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium">
+                    {post.channel_name}
+                  </span>
+                )}
+                <span className="flex items-center gap-1">
+                  <MessageCircle className="size-3.5" />
+                  {post.reply_count}{" "}
+                  {post.reply_count === 1 ? "reply" : "replies"}
+                </span>
+                <span>{post.last_reply_time || post.time}</span>
+              </div>
+            </div>
+          </div>
+        </Link>
+      ))}
+    </div>
   );
 }

@@ -1,3 +1,5 @@
+from django.db.models import Count
+
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
@@ -19,9 +21,11 @@ from .serializers import (
 
 
 class ChannelViewSet(viewsets.ModelViewSet):
-    queryset = Channel.objects.all()
     serializer_class = ChannelSerializer
     pagination_class = None
+
+    def get_queryset(self):
+        return Channel.objects.annotate(post_count=Count("posts")).order_by("sort_order")
 
     def get_permissions(self):
         if self.action in ("create", "update", "partial_update", "destroy"):

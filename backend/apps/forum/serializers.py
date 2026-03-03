@@ -5,9 +5,33 @@ from .models import Channel, ForumPost, ForumReply, Topic
 
 
 class ChannelSerializer(serializers.ModelSerializer):
+    post_count = serializers.IntegerField(read_only=True, default=0)
+    latest_post_title = serializers.SerializerMethodField()
+    latest_activity = serializers.SerializerMethodField()
+
     class Meta:
         model = Channel
-        fields = ["id", "name", "slug"]
+        fields = ["id", "name", "slug", "post_count", "latest_post_title", "latest_activity"]
+
+    def get_latest_post_title(self, obj):
+        post = obj.posts.order_by("-created_at").first()
+        return post.title if post else None
+
+    def get_latest_activity(self, obj):
+        from apps.forum.models import ForumReply
+        # Check latest reply in any post in this channel
+        latest_reply = (
+            ForumReply.objects.filter(post__channel=obj)
+            .order_by("-created_at")
+            .values_list("created_at", flat=True)
+            .first()
+        )
+        latest_post = obj.posts.order_by("-created_at").values_list("created_at", flat=True).first()
+        candidates = [t for t in [latest_reply, latest_post] if t]
+        if not candidates:
+            return None
+        latest = max(candidates)
+        return f"{timesince(latest)} ago"
 
 
 class TopicSerializer(serializers.ModelSerializer):
@@ -51,6 +75,8 @@ class ForumPostListSerializer(serializers.ModelSerializer):
     likes_count = serializers.IntegerField(source="likes.count", read_only=True)
     reply_count = serializers.IntegerField(source="replies.count", read_only=True)
     time = serializers.SerializerMethodField()
+    last_reply_time = serializers.SerializerMethodField()
+    last_reply_author_name = serializers.SerializerMethodField()
 
     class Meta:
         model = ForumPost
@@ -58,6 +84,7 @@ class ForumPostListSerializer(serializers.ModelSerializer):
             "id", "author_slug", "author_name", "location", "home_photo",
             "channel_name", "channel_slug", "topic_names", "title", "body", "image",
             "pinned", "likes_count", "reply_count", "time", "created_at",
+            "last_reply_time", "last_reply_author_name",
         ]
 
     def get_time(self, obj):
@@ -65,6 +92,17 @@ class ForumPostListSerializer(serializers.ModelSerializer):
 
     def get_topic_names(self, obj):
         return list(obj.topics.values_list("name", flat=True))
+
+    def get_last_reply_time(self, obj):
+        last_reply = obj.replies.order_by("-created_at").first()
+        ts = last_reply.created_at if last_reply else obj.created_at
+        return f"{timesince(ts)} ago"
+
+    def get_last_reply_author_name(self, obj):
+        last_reply = obj.replies.order_by("-created_at").first()
+        if last_reply:
+            return last_reply.author.profile.name
+        return None
 
 
 class ForumPostDetailSerializer(ForumPostListSerializer):
@@ -91,4 +129,4 @@ class ForumPostCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ForumPost
-        fields = ["id", "title", "body", "image", "channel", "topics"]
+        fields = ["id", "title", "body", "image", "channel", "topics", "pinned"]

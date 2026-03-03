@@ -178,13 +178,22 @@ export default function MemberForumDetailPage({
   return (
     <>
       <header className="px-4 md:px-8 h-18 flex items-center bg-background shrink-0 border-b border-border sticky top-0 z-10">
-        <Link
-          to="/m/forum"
-          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Forum
-        </Link>
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Link
+            to="/m/forum"
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Forum
+          </Link>
+          <span className="text-muted-foreground/50">/</span>
+          <Link
+            to={`/m/forum?channel=${post.channel_slug}`}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {post.channel_name}
+          </Link>
+        </div>
       </header>
       <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
         {/* Post header */}
@@ -243,18 +252,6 @@ export default function MemberForumDetailPage({
         <div className="mt-8 border-t border-border pt-8">
           <RenderContent content={post.body} />
 
-          {(post.topic_names?.length ?? 0) > 0 && (
-            <div className="mt-5 flex flex-wrap gap-2">
-              {post.topic_names.map((t: string) => (
-                <span
-                  key={t}
-                  className="rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground"
-                >
-                  {t}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Replies */}
