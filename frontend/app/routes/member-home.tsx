@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { Heart, MessageCircle } from "lucide-react";
+import { Heart, MessageCircle, Check, ChevronRight } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Progress } from "~/components/ui/progress";
+import { Button } from "~/components/ui/button";
 import { PageHeader } from "~/components/page-header";
 import {
   allMembers,
@@ -12,6 +14,14 @@ import {
 
 const upcomingEvents = allEvents.filter((e) => e.status === "upcoming");
 const recentMembers = allMembers.slice(0, 3);
+
+const onboardingItems = [
+  { id: "profile", title: "Fill out your profile", href: "/m/profile" },
+  { id: "blog", title: "Make a blog post", href: "/m/posts" },
+  { id: "forum", title: "Answer a forum question", href: "/m/forum" },
+  { id: "marketplace", title: "Check out the marketplace", href: "/m/marketplace" },
+  { id: "events", title: "View our events", href: "/m/events" },
+];
 
 const followedSlugs = new Set(["margaret-h", "eleanor-m"]);
 const followedNames = new Set(
@@ -81,6 +91,17 @@ const allFeedItems = buildFeed();
 
 export default function MemberHomePage() {
   const [audience, setAudience] = useState<AudienceType>("all");
+  const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
+
+  const completedCount = completedItems.size;
+  const totalCount = onboardingItems.length;
+  const firstIncompleteIndex = onboardingItems.findIndex(
+    (item) => !completedItems.has(item.id),
+  );
+
+  function handleOnboardingClick(id: string) {
+    setCompletedItems((prev) => new Set([...prev, id]));
+  }
 
   const filteredItems = allFeedItems.filter((item) => {
     if (audience === "following") {
@@ -99,7 +120,65 @@ export default function MemberHomePage() {
     <>
       <PageHeader title="Home" />
       <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
-        {/* Welcome section */}
+        {/* Getting started checklist */}
+        {completedCount < totalCount && (
+          <div className="mb-6 border border-border rounded-lg overflow-hidden">
+            <div className="px-6 py-5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-semibold text-foreground">
+                  Getting started
+                </h2>
+                <span className="text-xs text-muted-foreground">
+                  {completedCount} of {totalCount}
+                </span>
+              </div>
+              <Progress
+                value={(completedCount / totalCount) * 100}
+                className="h-1.5 mt-4"
+              />
+            </div>
+            <div>
+              {onboardingItems.map((item) => (
+                <Link
+                  key={item.id}
+                  to={item.href}
+                  onClick={() => handleOnboardingClick(item.id)}
+                  className="flex items-center gap-4 px-6 py-3.5 border-t border-border hover:bg-muted/50 transition-colors"
+                >
+                  {completedItems.has(item.id) ? (
+                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
+                      <Check className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
+                    </div>
+                  ) : (
+                    <div className="w-6 h-6 rounded-full border-2 border-border shrink-0" />
+                  )}
+                  <span
+                    className={`text-sm flex-1 ${completedItems.has(item.id) ? "text-muted-foreground" : ""}`}
+                  >
+                    {item.title}
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/40 shrink-0" />
+                </Link>
+              ))}
+            </div>
+            {firstIncompleteIndex >= 0 && (
+              <div className="px-6 py-4 border-t border-border">
+                <Button className="w-full" asChild>
+                  <Link
+                    to={onboardingItems[firstIncompleteIndex].href}
+                    onClick={() =>
+                      handleOnboardingClick(
+                        onboardingItems[firstIncompleteIndex].id,
+                      )
+                    }
+                  >
+                    Next step
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Quick stats */}
         <div className="mb-4 grid grid-cols-3 rounded-lg border border-border overflow-hidden">
