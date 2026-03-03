@@ -43,6 +43,17 @@ export async function apiPatch(request: Request, path: string, body: unknown) {
   });
 }
 
+export async function apiPut(request: Request, path: string, body: unknown) {
+  return apiFetch(request, path, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function apiDelete(request: Request, path: string) {
+  return apiFetch(request, path, { method: "DELETE" });
+}
+
 /**
  * Create a redirect response that forwards Set-Cookie headers from Django.
  */

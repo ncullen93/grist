@@ -12,6 +12,7 @@ import {
   Plus,
   Store,
   BookOpen,
+  Shield,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 
@@ -20,6 +21,7 @@ interface User {
   email: string;
   first_name: string;
   profile_slug?: string;
+  is_staff?: boolean;
 }
 
 const navItems = [
@@ -175,6 +177,37 @@ export function MemberSidebar({ user }: { user?: User }) {
           );
         })}
       </nav>
+
+      {/* Admin link for staff users */}
+      {user?.is_staff && (
+        <div className={`mt-4 ${isCollapsed ? "flex justify-center" : ""}`}>
+          {isCollapsed ? (
+            <Link
+              to="/m/admin"
+              title="Admin"
+              className={`flex items-center justify-center w-10 h-9 rounded-lg transition-colors ${
+                location.pathname.startsWith("/m/admin")
+                  ? "bg-secondary text-primary"
+                  : "text-muted-foreground hover:bg-secondary hover:text-primary"
+              }`}
+            >
+              <Shield className="size-[18px]" />
+            </Link>
+          ) : (
+            <Link
+              to="/m/admin"
+              className={`flex items-center gap-4 px-3 py-1.5 rounded-lg transition-colors ${
+                location.pathname.startsWith("/m/admin")
+                  ? "bg-secondary font-medium text-foreground"
+                  : "text-foreground/70 hover:bg-secondary hover:text-foreground"
+              }`}
+            >
+              <Shield className="size-[18px] shrink-0" />
+              <span className="text-sm">Admin</span>
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* Footer with collapse toggle */}
       <div

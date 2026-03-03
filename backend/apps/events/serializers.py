@@ -41,3 +41,41 @@ class EventDetailSerializer(EventListSerializer):
 
     class Meta(EventListSerializer.Meta):
         fields = EventListSerializer.Meta.fields + ["long_description", "agenda", "speaker"]
+
+
+class EventCreateSerializer(serializers.ModelSerializer):
+    agenda = EventAgendaItemSerializer(many=True, required=False)
+    speaker = EventSpeakerSerializer(required=False)
+
+    class Meta:
+        model = Event
+        fields = [
+            "title", "subtitle", "description", "long_description",
+            "date", "date_start", "time", "type", "status",
+            "image", "spots", "featured", "agenda", "speaker",
+        ]
+
+    def create(self, validated_data):
+        agenda_data = validated_data.pop("agenda", [])
+        speaker_data = validated_data.pop("speaker", None)
+        event = Event.objects.create(**validated_data)
+        for i, item in enumerate(agenda_data):
+            EventAgendaItem.objects.create(event=event, sort_order=i, **item)
+        if speaker_data:
+            EventSpeaker.objects.create(event=event, **speaker_data)
+        return event
+
+    def update(self, instance, validated_data):
+        agenda_data = validated_data.pop("agenda", None)
+        speaker_data = validated_data.pop("speaker", None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if agenda_data is not None:
+            instance.agenda.all().delete()
+            for i, item in enumerate(agenda_data):
+                EventAgendaItem.objects.create(event=instance, sort_order=i, **item)
+        if speaker_data is not None:
+            EventSpeaker.objects.filter(event=instance).delete()
+            EventSpeaker.objects.create(event=instance, **speaker_data)
+        return instance

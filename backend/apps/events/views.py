@@ -1,12 +1,14 @@
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from core.permissions import IsAdminUser
 from .models import Event, RSVP
-from .serializers import EventDetailSerializer, EventListSerializer
+from .serializers import EventCreateSerializer, EventDetailSerializer, EventListSerializer
 
 
-class EventViewSet(viewsets.ReadOnlyModelViewSet):
+class EventViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = Event.objects.prefetch_related("rsvps", "agenda", "speaker")
         status_filter = self.request.query_params.get("status")
@@ -15,9 +17,16 @@ class EventViewSet(viewsets.ReadOnlyModelViewSet):
         return qs
 
     def get_serializer_class(self):
+        if self.action in ("create", "update", "partial_update"):
+            return EventCreateSerializer
         if self.action == "retrieve":
             return EventDetailSerializer
         return EventListSerializer
+
+    def get_permissions(self):
+        if self.action in ("create", "update", "partial_update", "destroy"):
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
 
     @action(detail=True, methods=["post"])
     def rsvp(self, request, pk=None):

@@ -55,5 +55,10 @@ export default [
     route("posts/new-forum", "routes/member-posts-new-forum.tsx"),
     route("posts/new-marketplace", "routes/member-posts-new-marketplace.tsx"),
     route("blog", "routes/member-blog.tsx"),
+
+    // Admin
+    route("admin", "routes/admin.tsx"),
+    route("admin/events/new", "routes/admin-event-create.tsx"),
+    route("admin/events/:id/edit", "routes/admin-event-edit.tsx"),
   ]),
 ] satisfies RouteConfig;
