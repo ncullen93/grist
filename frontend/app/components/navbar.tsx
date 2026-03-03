@@ -15,7 +15,7 @@ const navItems: {
 }[] = [
   {
     label: "Apply",
-    href: "/about",
+    href: "/signup",
     hasDropdown: false,
     //dropdownItems: ["Our Story", "FAQ", "Contact"],
   },

@@ -19,6 +19,13 @@ export default [
     route("events/demo/:id", "routes/event-detail-demo.tsx"),
   ]),
 
+  // Signup / onboarding flow
+  route("signup", "routes/signup-layout.tsx", [
+    index("routes/signup-address.tsx"),
+    route("account", "routes/signup-account.tsx"),
+    route("welcome", "routes/signup-welcome.tsx"),
+  ]),
+
   // Member dashboard (sidebar layout)
   route("m", "routes/member-layout.tsx", [
     index("routes/member-home.tsx"),
