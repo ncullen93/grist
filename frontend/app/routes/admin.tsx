@@ -12,7 +12,6 @@ import {
   ClipboardList,
   LifeBuoy,
   BarChart3,
-  ChevronRight,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -81,25 +80,19 @@ export default function AdminPage() {
     <>
       <PageHeader title="Admin" />
       <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {cards.map((card) => (
             <Link
               key={card.title}
               to={card.href}
-              className="group flex items-center gap-4 rounded-xl border border-border bg-background px-5 py-4 transition-all hover:border-primary/30 hover:shadow-sm"
+              className="group flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-background p-6 aspect-3/1 transition-all hover:border-primary/30 hover:shadow-sm"
             >
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <card.icon className="size-5" />
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <card.icon className="size-6" />
               </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="font-display text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                  {card.title}
-                </h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {card.description}
-                </p>
-              </div>
-              <ChevronRight className="size-4 shrink-0 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+              <h3 className="font-display text-base font-semibold text-foreground group-hover:text-primary transition-colors">
+                {card.title}
+              </h3>
             </Link>
           ))}
         </div>

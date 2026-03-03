@@ -440,7 +440,7 @@ export default function AdminEventCreatePage() {
               disabled={isSubmitting}
               className="rounded-full px-8"
             >
-              {isSubmitting ? "Creating..." : "Create Event"}
+              Create Event
             </Button>
             <Link
               to="/m/admin/events"

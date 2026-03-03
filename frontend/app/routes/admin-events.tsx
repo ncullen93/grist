@@ -160,29 +160,30 @@ export default function AdminEventsPage({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
-      <PageHeader title="Events">
-        <Link to="/m/admin/events/new">
-          <Button className="rounded-full gap-2">
-            <Plus className="size-4" />
-            Create Event
-          </Button>
-        </Link>
-      </PageHeader>
-      <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
+      <header className="px-4 md:px-8 h-18 flex items-center bg-background shrink-0 border-b border-border sticky top-0 z-10">
         <Link
           to="/m/admin"
-          className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-6"
+          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Admin
         </Link>
-
+      </header>
+      <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="all">All ({events.length})</TabsTrigger>
-            <TabsTrigger value="upcoming">Upcoming ({upcoming.length})</TabsTrigger>
-            <TabsTrigger value="past">Past ({past.length})</TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between">
+            <TabsList>
+              <TabsTrigger value="all">All ({events.length})</TabsTrigger>
+              <TabsTrigger value="upcoming">Upcoming ({upcoming.length})</TabsTrigger>
+              <TabsTrigger value="past">Past ({past.length})</TabsTrigger>
+            </TabsList>
+            <Link to="/m/admin/events/new">
+              <Button className="rounded-full gap-2">
+                <Plus className="size-4" />
+                Create Event
+              </Button>
+            </Link>
+          </div>
 
           <TabsContent value="all">
             <EventList events={events} handleDelete={handleDelete} />

@@ -2,7 +2,6 @@ import { Link } from "react-router";
 import type { Route } from "./+types/admin-analytics";
 import { apiGet } from "~/lib/api.server";
 import { redirect } from "react-router";
-import { PageHeader } from "~/components/page-header";
 import { ArrowLeft } from "lucide-react";
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -54,15 +53,16 @@ export default function AdminAnalyticsPage({ loaderData }: Route.ComponentProps)
   if (!analytics) {
     return (
       <>
-        <PageHeader title="Analytics" />
-        <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
+        <header className="px-4 md:px-8 h-18 flex items-center bg-background shrink-0 border-b border-border sticky top-0 z-10">
           <Link
             to="/m/admin"
-            className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-6"
+            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Admin
           </Link>
+        </header>
+        <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
           <div className="rounded-lg border border-border p-16 text-center">
             <p className="text-sm text-muted-foreground">Could not load analytics data.</p>
           </div>
@@ -73,16 +73,16 @@ export default function AdminAnalyticsPage({ loaderData }: Route.ComponentProps)
 
   return (
     <>
-      <PageHeader title="Analytics" />
-      <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
+      <header className="px-4 md:px-8 h-18 flex items-center bg-background shrink-0 border-b border-border sticky top-0 z-10">
         <Link
           to="/m/admin"
-          className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-6"
+          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Admin
         </Link>
-
+      </header>
+      <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
         <div className="space-y-8">
           {/* Top stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -3,7 +3,6 @@ import { Link, useFetcher, useSearchParams } from "react-router";
 import type { Route } from "./+types/admin-forum";
 import { apiGet, apiDelete, apiPost, apiPatch } from "~/lib/api.server";
 import { redirect } from "react-router";
-import { PageHeader } from "~/components/page-header";
 import {
   Tabs,
   TabsList,
@@ -226,16 +225,16 @@ export default function AdminForumPage({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
-      <PageHeader title="Forum" />
-      <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
+      <header className="px-4 md:px-8 h-18 flex items-center bg-background shrink-0 border-b border-border sticky top-0 z-10">
         <Link
           to="/m/admin"
-          className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-6"
+          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Admin
         </Link>
-
+      </header>
+      <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="posts">Posts ({posts.length})</TabsTrigger>

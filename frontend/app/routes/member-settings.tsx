@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useFetcher, redirect } from "react-router";
 import { Button } from "~/components/ui/button";
 import {
@@ -9,7 +9,14 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { PageHeader } from "~/components/page-header";
-import { apiGet, apiPatch } from "~/lib/api.server";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "~/components/ui/dialog";
+import { apiGet, apiPatch, apiPost } from "~/lib/api.server";
 import toast from "react-hot-toast";
 import type { Route } from "./+types/member-settings";
 
@@ -36,6 +43,20 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
+  const intent = formData.get("intent") as string;
+
+  if (intent === "delete-account") {
+    try {
+      const res = await apiPost(request, "/api/members/delete-account/");
+      if (!res.ok && res.status !== 204) {
+        return { error: "Failed to delete account." };
+      }
+      return redirect("/");
+    } catch {
+      return { error: "Unable to connect to server." };
+    }
+  }
+
   const emailNotifications = formData.get("emailNotifications") === "true";
   const eventReminders = formData.get("eventReminders") === "true";
   const forumDigest = formData.get("forumDigest") === "true";
@@ -72,16 +93,18 @@ export default function MemberSettingsPage({ loaderData }: Route.ComponentProps)
   const [profileVisibility, setProfileVisibility] = useState(loaderData.profileVisibility);
 
   const fetcher = useFetcher();
+  const toastShownRef = useRef<string | null>(null);
 
-  // Show toast on save result
-  if (fetcher.data?.saved) {
-    toast.success("Saved");
-    fetcher.data.saved = false; // prevent re-toast
-  }
-  if (fetcher.data?.error) {
-    toast.error(fetcher.data.error);
-    fetcher.data.error = null;
-  }
+  useEffect(() => {
+    if (fetcher.data?.saved && toastShownRef.current !== "saved") {
+      toast.success("Saved");
+      toastShownRef.current = "saved";
+    } else if (fetcher.data?.error && toastShownRef.current !== fetcher.data.error) {
+      toast.error(fetcher.data.error);
+      toastShownRef.current = fetcher.data.error;
+    }
+    if (!fetcher.data) toastShownRef.current = null;
+  }, [fetcher.data]);
 
   const handleSave = () => {
     fetcher.submit(
@@ -162,29 +185,7 @@ export default function MemberSettingsPage({ loaderData }: Route.ComponentProps)
         </div>
 
         {/* Danger zone */}
-        <div className="mt-8 rounded-lg border border-destructive/30 overflow-hidden">
-          <div className="px-6 py-4 border-b border-destructive/30 bg-destructive/5">
-            <h3 className="text-sm font-semibold text-destructive">
-              Danger Zone
-            </h3>
-          </div>
-          <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-foreground">
-                Leave this club
-              </p>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                You will lose access to all member content and events.
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              className="rounded-full text-destructive border-destructive/30 hover:bg-destructive/10 shrink-0"
-            >
-              Leave club
-            </Button>
-          </div>
-        </div>
+        <DeleteAccountSection />
 
         {/* Save */}
         <div className="mt-8 flex items-center gap-4">
@@ -198,6 +199,65 @@ export default function MemberSettingsPage({ loaderData }: Route.ComponentProps)
         </div>
       </div>
     </>
+  );
+}
+
+function DeleteAccountSection() {
+  const deleteFetcher = useFetcher();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="mt-8 rounded-lg border border-destructive/30 overflow-hidden">
+      <div className="px-6 py-4 border-b border-destructive/30 bg-destructive/5">
+        <h3 className="text-sm font-semibold text-destructive">
+          Danger Zone
+        </h3>
+      </div>
+      <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-foreground">
+            Delete account
+          </p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            This will permanently delete your account and all your data.
+          </p>
+        </div>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              className="rounded-full text-destructive border-destructive/30 hover:bg-destructive/10 shrink-0"
+            >
+              Delete account
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogTitle>Delete your account?</DialogTitle>
+            <DialogDescription>
+              This action is permanent. Your profile, posts, and all data will
+              be permanently deleted. This cannot be undone.
+            </DialogDescription>
+            <div className="mt-4 flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={deleteFetcher.state !== "idle"}
+                onClick={() =>
+                  deleteFetcher.submit(
+                    { intent: "delete-account" },
+                    { method: "post" },
+                  )
+                }
+              >
+                Delete account
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
   );
 }
 

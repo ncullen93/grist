@@ -1,5 +1,14 @@
 import { Link, useFetcher, useSearchParams } from "react-router";
-import { ArrowLeft, Plus, Check } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  Check,
+  Heart,
+  MessageCircle,
+  FileText,
+  MessageSquare,
+  Store,
+} from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
   Tabs,
@@ -11,14 +20,127 @@ import { apiGet, apiPost, apiDelete } from "~/lib/api.server";
 import { redirect } from "react-router";
 import type { Route } from "./+types/member-profile-detail";
 
+interface PostItem {
+  type: "blog" | "forum" | "marketplace";
+  id: number;
+  title: string;
+  image: string;
+  likes_count: number;
+  replies: number;
+  time: string;
+  created_at: string;
+}
+
+interface ActivityItem {
+  type: string;
+  title: string;
+  description: string;
+  href: string;
+  time: string;
+  created_at: string;
+}
+
 export async function loader({ request, params }: Route.LoaderArgs) {
   try {
-    const res = await apiGet(request, `/api/members/${params.slug}/`);
-    if (!res.ok) {
-      if (res.status === 404) throw new Response("Member not found", { status: 404 });
+    const [memberRes, blogRes, forumRes, listingRes, activityRes] =
+      await Promise.all([
+        apiGet(request, `/api/members/${params.slug}/`),
+        apiGet(request, `/api/blog/posts/?author=${params.slug}`),
+        apiGet(request, `/api/forum/posts/?author=${params.slug}`),
+        apiGet(request, `/api/marketplace/listings/?author=${params.slug}`),
+        apiGet(request, `/api/members/${params.slug}/activity/`),
+      ]);
+
+    if (!memberRes.ok) {
+      if (memberRes.status === 404)
+        throw new Response("Member not found", { status: 404 });
       return redirect("/login");
     }
-    return { member: await res.json() };
+
+    const member = await memberRes.json();
+    const blogData = blogRes.ok ? await blogRes.json() : { results: [] };
+    const forumData = forumRes.ok ? await forumRes.json() : { results: [] };
+    const listingData = listingRes.ok
+      ? await listingRes.json()
+      : { results: [] };
+    const activityData: ActivityItem[] = activityRes.ok
+      ? await activityRes.json()
+      : [];
+
+    // Build unified posts list
+    const posts: PostItem[] = [
+      ...(blogData.results || []).map(
+        (p: {
+          id: number;
+          title: string;
+          image: string;
+          likes_count: number;
+          comment_count: number;
+          time: string;
+          created_at: string;
+          status: string;
+        }) =>
+          p.status === "published"
+            ? {
+                type: "blog" as const,
+                id: p.id,
+                title: p.title,
+                image: p.image,
+                likes_count: p.likes_count,
+                replies: p.comment_count,
+                time: p.time,
+                created_at: p.created_at,
+              }
+            : null,
+      ),
+      ...(forumData.results || []).map(
+        (p: {
+          id: number;
+          title: string;
+          image: string;
+          likes_count: number;
+          reply_count: number;
+          time: string;
+          created_at: string;
+        }) => ({
+          type: "forum" as const,
+          id: p.id,
+          title: p.title,
+          image: p.image,
+          likes_count: p.likes_count,
+          replies: p.reply_count,
+          time: p.time,
+          created_at: p.created_at,
+        }),
+      ),
+      ...(listingData.results || []).map(
+        (p: {
+          id: number;
+          title: string;
+          image: string;
+          likes_count: number;
+          reply_count: number;
+          time: string;
+          created_at: string;
+        }) => ({
+          type: "marketplace" as const,
+          id: p.id,
+          title: p.title,
+          image: p.image,
+          likes_count: p.likes_count,
+          replies: p.reply_count,
+          time: p.time,
+          created_at: p.created_at,
+        }),
+      ),
+    ].filter(Boolean) as PostItem[];
+
+    posts.sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
+
+    return { member, posts, activity: activityData };
   } catch (e) {
     if (e instanceof Response) throw e;
     return redirect("/login");
@@ -78,36 +200,74 @@ function StoryContent({ story }: { story: unknown[] | null }) {
 
   return (
     <>
-      {(story as Array<{ type: string; content?: string; style?: string; preview?: string }>).map(
-        (block, i) => {
-          if (block.type === "image" && block.preview) {
-            return (
-              <img
-                key={i}
-                src={block.preview}
-                alt=""
-                className="w-full rounded-xl object-cover"
-              />
-            );
-          }
-          if (block.type === "text" && block.content) {
-            return (
-              <p key={i} className={styleClasses[block.style || "normal"]}>
-                {block.content}
-              </p>
-            );
-          }
-          return null;
+      {(
+        story as Array<{
+          type: string;
+          content?: string;
+          style?: string;
+          preview?: string;
+        }>
+      ).map((block, i) => {
+        if (block.type === "image" && block.preview) {
+          return (
+            <img
+              key={i}
+              src={block.preview}
+              alt=""
+              className="w-full rounded-xl object-cover"
+            />
+          );
         }
-      )}
+        if (block.type === "text" && block.content) {
+          return (
+            <p key={i} className={styleClasses[block.style || "normal"]}>
+              {block.content}
+            </p>
+          );
+        }
+        return null;
+      })}
     </>
   );
+}
+
+function getPostLink(post: PostItem) {
+  switch (post.type) {
+    case "blog":
+      return `/m/blog/${post.id}`;
+    case "forum":
+      return `/m/forum/${post.id}`;
+    case "marketplace":
+      return `/m/marketplace/${post.id}`;
+  }
+}
+
+function getPostIcon(type: PostItem["type"]) {
+  switch (type) {
+    case "blog":
+      return FileText;
+    case "forum":
+      return MessageSquare;
+    case "marketplace":
+      return Store;
+  }
+}
+
+function getPostLabel(type: PostItem["type"]) {
+  switch (type) {
+    case "blog":
+      return "Blog";
+    case "forum":
+      return "Forum";
+    case "marketplace":
+      return "Marketplace";
+  }
 }
 
 export default function MemberProfileDetailPage({
   loaderData,
 }: Route.ComponentProps) {
-  const { member } = loaderData;
+  const { member, posts, activity } = loaderData;
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "overview";
   const setActiveTab = (value: string) => {
@@ -251,21 +411,107 @@ export default function MemberProfileDetailPage({
 
           <TabsContent value="posts" className="min-h-[70dvh]">
             <div className="mt-6">
-              <div className="rounded-xl border border-border p-16 text-center">
-                <p className="text-sm text-muted-foreground">
-                  No posts yet.
-                </p>
-              </div>
+              {posts.length === 0 ? (
+                <div className="rounded-xl border border-border p-16 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    No posts yet.
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-border divide-y divide-border">
+                  {posts.map((post) => {
+                    const Icon = getPostIcon(post.type);
+                    return (
+                      <Link
+                        key={`${post.type}-${post.id}`}
+                        to={getPostLink(post)}
+                        className="group flex items-start gap-5 px-6 py-5 transition-colors hover:bg-muted/30"
+                      >
+                        {post.image ? (
+                          <img
+                            src={post.image}
+                            alt=""
+                            className="size-20 rounded-lg object-cover shrink-0"
+                          />
+                        ) : (
+                          <div className="flex size-20 items-center justify-center rounded-lg bg-muted shrink-0">
+                            <Icon className="size-6 text-muted-foreground/50" />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-display text-base font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                              {post.title || "Untitled"}
+                            </p>
+                            <span className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                              {getPostLabel(post.type)}
+                            </span>
+                          </div>
+                          <p className="mt-1.5 text-sm text-muted-foreground">
+                            {post.time}
+                          </p>
+                        </div>
+                        <div className="shrink-0 flex items-center gap-4 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1.5">
+                            <Heart className="size-3.5" />
+                            {post.likes_count}
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <MessageCircle className="size-3.5" />
+                            {post.replies}
+                          </span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </TabsContent>
 
           <TabsContent value="activity" className="min-h-[70dvh]">
             <div className="mt-6">
-              <div className="rounded-xl border border-border p-16 text-center">
-                <p className="text-sm text-muted-foreground">
-                  No activity yet.
-                </p>
-              </div>
+              {activity.length === 0 ? (
+                <div className="rounded-xl border border-border p-16 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    No activity yet.
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-border divide-y divide-border">
+                  {activity.map((item, i) => (
+                    <Link
+                      key={`${item.type}-${i}`}
+                      to={item.href}
+                      className="group flex items-center gap-4 px-6 py-4 transition-colors hover:bg-muted/30"
+                    >
+                      <div className="flex size-9 items-center justify-center rounded-full bg-muted shrink-0">
+                        <span className="text-sm">
+                          {item.type.includes("like")
+                            ? "♥"
+                            : item.type.includes("rsvp")
+                              ? "📅"
+                              : item.type.includes("reply") ||
+                                  item.type.includes("comment")
+                                ? "💬"
+                                : "✏️"}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                          {item.title}
+                        </p>
+                        <p className="mt-0.5 text-sm text-muted-foreground truncate">
+                          {item.description}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {item.time}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>

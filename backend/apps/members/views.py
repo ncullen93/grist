@@ -1,11 +1,19 @@
 import uuid
+from itertools import chain
+from operator import attrgetter
 
 from django.conf import settings
 from django.core.files.storage import default_storage
+from django.utils.timesince import timesince
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
+
+from apps.blog.models import BlogComment, BlogPost, BlogPostLike
+from apps.events.models import RSVP
+from apps.forum.models import ForumPost, ForumPostLike, ForumReply
+from apps.marketplace.models import Listing, ListingLike, ListingReply
 
 from .filters import MemberProfileFilter
 from .models import Follow, Invitation, MemberProfile, MemberSettings, SupportRequest
@@ -79,6 +87,112 @@ class MemberProfileViewSet(viewsets.ModelViewSet):
             defaults={"inviter": request.user},
         )
         return Response(InvitationSerializer(invitation).data)
+
+    @action(detail=True, methods=["get"])
+    def activity(self, request, slug=None):
+        profile = self.get_object()
+        user = profile.user
+
+        def _fmt_time(dt):
+            return f"{timesince(dt)} ago"
+
+        items = []
+
+        for obj in BlogPost.objects.filter(author=user, status="published")[:20]:
+            items.append({
+                "type": "blog_post",
+                "title": f"Published a blog post",
+                "description": obj.title,
+                "href": f"/m/blog/{obj.id}",
+                "created_at": obj.created_at,
+            })
+        for obj in BlogComment.objects.filter(author=user).select_related("post")[:20]:
+            items.append({
+                "type": "blog_comment",
+                "title": "Commented on a blog post",
+                "description": obj.post.title,
+                "href": f"/m/blog/{obj.post_id}",
+                "created_at": obj.created_at,
+            })
+        for obj in BlogPostLike.objects.filter(user=user).select_related("post")[:20]:
+            items.append({
+                "type": "blog_like",
+                "title": "Liked a blog post",
+                "description": obj.post.title,
+                "href": f"/m/blog/{obj.post_id}",
+                "created_at": obj.created_at,
+            })
+        for obj in ForumPost.objects.filter(author=user)[:20]:
+            items.append({
+                "type": "forum_post",
+                "title": "Started a forum discussion",
+                "description": obj.title,
+                "href": f"/m/forum/{obj.id}",
+                "created_at": obj.created_at,
+            })
+        for obj in ForumReply.objects.filter(author=user).select_related("post")[:20]:
+            items.append({
+                "type": "forum_reply",
+                "title": "Replied to a forum discussion",
+                "description": obj.post.title,
+                "href": f"/m/forum/{obj.post_id}",
+                "created_at": obj.created_at,
+            })
+        for obj in ForumPostLike.objects.filter(user=user).select_related("post")[:20]:
+            items.append({
+                "type": "forum_like",
+                "title": "Liked a forum post",
+                "description": obj.post.title,
+                "href": f"/m/forum/{obj.post_id}",
+                "created_at": obj.created_at,
+            })
+        for obj in Listing.objects.filter(author=user)[:20]:
+            items.append({
+                "type": "listing",
+                "title": "Listed on the marketplace",
+                "description": obj.title,
+                "href": f"/m/marketplace/{obj.id}",
+                "created_at": obj.created_at,
+            })
+        for obj in ListingReply.objects.filter(author=user).select_related("listing")[:20]:
+            items.append({
+                "type": "listing_reply",
+                "title": "Replied to a marketplace listing",
+                "description": obj.listing.title,
+                "href": f"/m/marketplace/{obj.listing_id}",
+                "created_at": obj.created_at,
+            })
+        for obj in ListingLike.objects.filter(user=user).select_related("listing")[:20]:
+            items.append({
+                "type": "listing_like",
+                "title": "Liked a marketplace listing",
+                "description": obj.listing.title,
+                "href": f"/m/marketplace/{obj.listing_id}",
+                "created_at": obj.created_at,
+            })
+        for obj in RSVP.objects.filter(user=user).select_related("event")[:20]:
+            items.append({
+                "type": "rsvp",
+                "title": "RSVP'd to an event",
+                "description": obj.event.title,
+                "href": f"/m/events/{obj.event_id}",
+                "created_at": obj.created_at,
+            })
+
+        items.sort(key=lambda x: x["created_at"], reverse=True)
+        items = items[:30]
+
+        for item in items:
+            item["time"] = _fmt_time(item["created_at"])
+            item["created_at"] = item["created_at"].isoformat()
+
+        return Response(items)
+
+    @action(detail=False, methods=["post"], url_path="delete-account")
+    def delete_account(self, request):
+        user = request.user
+        user.delete()
+        return Response({"status": "deleted"}, status=status.HTTP_204_NO_CONTENT)
 
 
 class MemberSettingsView(generics.RetrieveUpdateAPIView):
