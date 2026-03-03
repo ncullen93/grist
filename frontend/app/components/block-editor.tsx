@@ -421,31 +421,37 @@ export function BlockEditor({
         )}
       </div>
 
-      <div className="p-6 min-h-50 cursor-text" onMouseDown={(e) => {
-        if (e.target !== e.currentTarget) return;
-        e.preventDefault();
-        const last = [...blocks].reverse().find((b) => b.type === "text");
-        if (last) textareaEls.current.get(last.id)?.focus();
-      }}>
+      <div className="px-6 pt-6 pb-0">
         {blocks.map((block, i) =>
           block.type === "text" ? (
-            <AutoGrowTextarea
+            <div
               key={block.id}
-              value={block.content}
-              textStyle={block.style}
-              isFirst={i === 0}
-              onChange={(v) => updateText(block.id, v)}
-              onCursorChange={() => trackCursor(block.id)}
-              onKeyDown={(e) => handleTextareaKeyDown(e, block.id)}
-              onFocus={() => setSelectedImageId(null)}
-              registerEl={(el) => {
-                if (el) textareaEls.current.set(block.id, el);
-                else textareaEls.current.delete(block.id);
+              className={`cursor-text ${i === 0 ? "" : "pt-1"} pb-1`}
+              onMouseDown={(e) => {
+                if (e.target === e.currentTarget) {
+                  e.preventDefault();
+                  const el = textareaEls.current.get(block.id);
+                  if (el) el.focus();
+                }
               }}
-              placeholder={
-                i === 0 && blocks.length === 1 ? placeholder : ""
-              }
-            />
+            >
+              <AutoGrowTextarea
+                value={block.content}
+                textStyle={block.style}
+                isFirst={i === 0}
+                onChange={(v) => updateText(block.id, v)}
+                onCursorChange={() => trackCursor(block.id)}
+                onKeyDown={(e) => handleTextareaKeyDown(e, block.id)}
+                onFocus={() => setSelectedImageId(null)}
+                registerEl={(el) => {
+                  if (el) textareaEls.current.set(block.id, el);
+                  else textareaEls.current.delete(block.id);
+                }}
+                placeholder={
+                  i === 0 && blocks.length === 1 ? placeholder : ""
+                }
+              />
+            </div>
           ) : (
             <div
               key={block.id}
@@ -490,6 +496,15 @@ export function BlockEditor({
             </div>
           ),
         )}
+        {/* Empty space at bottom — click to focus last text block */}
+        <div
+          className="min-h-24 cursor-text"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            const last = [...blocks].reverse().find((b) => b.type === "text");
+            if (last) textareaEls.current.get(last.id)?.focus();
+          }}
+        />
       </div>
     </div>
   );
