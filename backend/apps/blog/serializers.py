@@ -43,6 +43,7 @@ class BlogPostListSerializer(serializers.ModelSerializer):
             "id", "author_slug", "author_name", "author_photo",
             "author_location", "title", "content", "image",
             "likes_count", "comment_count", "time", "created_at",
+            "status",
         ]
 
     def get_time(self, obj):
@@ -66,4 +67,4 @@ class BlogPostDetailSerializer(BlogPostListSerializer):
 class BlogPostCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = BlogPost
-        fields = ["id", "title", "content", "image"]
+        fields = ["id", "title", "content", "image", "status"]

@@ -35,6 +35,7 @@ interface BlogPostItem {
   comment_count: number;
   time: string;
   created_at: string;
+  status: string;
 }
 
 interface ForumPostItem {
@@ -202,11 +203,18 @@ function PostCard({
 
       {/* Title + meta */}
       <div className="min-w-0 flex-1">
-        <Link to={editLink}>
-          <p className="font-display text-base font-semibold text-foreground group-hover:text-primary transition-colors truncate">
-            {item.data.title}
-          </p>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link to={editLink} className="min-w-0">
+            <p className="font-display text-base font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+              {item.data.title}
+            </p>
+          </Link>
+          {item.type === "blog" && (item.data as BlogPostItem).status === "draft" && (
+            <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+              Draft
+            </span>
+          )}
+        </div>
         <p className="mt-1.5 text-sm text-muted-foreground">
           {item.data.time}
         </p>

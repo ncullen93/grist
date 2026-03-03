@@ -28,6 +28,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
         title: post.title,
         content: post.content,
         image: post.image,
+        status: post.status as string,
       },
     };
   } catch (e) {
@@ -70,17 +71,17 @@ export async function action({ request, params }: Route.ActionArgs) {
     if (imgBlock) image = imgBlock.preview;
   } catch {}
 
+  const newStatus = formData.get("status") as string | null;
+  const patchPayload: Record<string, string> = { title, content, image };
+  if (newStatus) patchPayload.status = newStatus;
+
   try {
-    const res = await apiPatch(request, `/api/blog/posts/${params.id}/`, {
-      title,
-      content,
-      image,
-    });
+    const res = await apiPatch(request, `/api/blog/posts/${params.id}/`, patchPayload);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       return { error: err.detail || "Failed to save post." };
     }
-    return { saved: true };
+    return newStatus === "published" ? { published: true } : { saved: true };
   } catch {
     return { error: "Unable to connect to server." };
   }
@@ -114,6 +115,9 @@ export default function EditBlogPostPage({
   useEffect(() => {
     if (publishFetcher.state === "idle" && publishFetcher.data?.saved) {
       toast.success("Saved");
+    }
+    if (publishFetcher.state === "idle" && publishFetcher.data?.published) {
+      toast.success("Published");
     }
   }, [publishFetcher.state, publishFetcher.data]);
 
@@ -150,7 +154,9 @@ export default function EditBlogPostPage({
         (b.type === "text" && b.content.trim() !== "") || b.type === "image",
     );
 
-  const handleSave = () => {
+  const isDraft = post.status === "draft";
+
+  const handleSave = (newStatus?: "published") => {
     if (!hasContent) return;
     const cleanBlocks = blocks
       .filter(
@@ -164,10 +170,13 @@ export default function EditBlogPostPage({
         return { type: b.type, preview: b.preview };
       });
 
-    publishFetcher.submit(
-      { title, content: JSON.stringify(cleanBlocks) },
-      { method: "post" },
-    );
+    const data: Record<string, string> = {
+      title,
+      content: JSON.stringify(cleanBlocks),
+    };
+    if (newStatus) data.status = newStatus;
+
+    publishFetcher.submit(data, { method: "post" });
   };
 
   return (
@@ -185,13 +194,33 @@ export default function EditBlogPostPage({
               className="text-3xl! h-auto min-w-0 flex-1 border-0 bg-transparent px-0 py-0 font-display font-semibold shadow-none focus-visible:ring-0 focus-visible:border-0"
               autoFocus
             />
-            <Button
-              className="rounded-full px-8 shrink-0"
-              onClick={handleSave}
-              disabled={!hasContent || isSaving}
-            >
-              Save
-            </Button>
+            {isDraft ? (
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  variant="outline"
+                  className="rounded-full px-6"
+                  onClick={() => handleSave()}
+                  disabled={!hasContent || isSaving}
+                >
+                  Save Draft
+                </Button>
+                <Button
+                  className="rounded-full px-8"
+                  onClick={() => handleSave("published")}
+                  disabled={!hasContent || isSaving}
+                >
+                  Publish
+                </Button>
+              </div>
+            ) : (
+              <Button
+                className="rounded-full px-8 shrink-0"
+                onClick={() => handleSave()}
+                disabled={!hasContent || isSaving}
+              >
+                Save
+              </Button>
+            )}
           </div>
           <p className="mt-3 text-sm text-muted-foreground">
             By {loaderData.name} &middot; {loaderData.location}

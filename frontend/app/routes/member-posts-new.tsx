@@ -54,7 +54,8 @@ export async function action({ request }: Route.ActionArgs) {
     if (imgBlock) image = imgBlock.preview;
   } catch {}
 
-  const payload: Record<string, string> = { title, content };
+  const postStatus = (formData.get("status") as string) || "published";
+  const payload: Record<string, string> = { title, content, status: postStatus };
   if (image) payload.image = image;
 
   try {
@@ -65,6 +66,9 @@ export async function action({ request }: Route.ActionArgs) {
       return { error: msg };
     }
     const created = await res.json();
+    if (postStatus === "draft") {
+      return redirect(`/m/posts/edit-blog/${created.id}`);
+    }
     return redirect(`/m/blog/${created.id}`);
   } catch {
     return { error: "Unable to connect to server." };
@@ -115,7 +119,7 @@ export default function MemberPostsNewPage({
         (b.type === "text" && b.content.trim() !== "") || b.type === "image",
     );
 
-  const handlePublish = () => {
+  const handleSubmit = (status: "draft" | "published") => {
     if (!hasContent) return;
     const cleanBlocks = blocks
       .filter(
@@ -130,7 +134,7 @@ export default function MemberPostsNewPage({
       });
 
     publishFetcher.submit(
-      { title, content: JSON.stringify(cleanBlocks) },
+      { title, content: JSON.stringify(cleanBlocks), status },
       { method: "post" },
     );
   };
@@ -150,13 +154,23 @@ export default function MemberPostsNewPage({
               className="text-3xl! h-auto min-w-0 flex-1 border-0 bg-transparent px-0 py-0 font-display font-semibold shadow-none focus-visible:ring-0 focus-visible:border-0"
               autoFocus
             />
-            <Button
-              className="rounded-full px-8 shrink-0"
-              onClick={handlePublish}
-              disabled={!hasContent || isPublishing}
-            >
-              Publish
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="outline"
+                className="rounded-full px-6"
+                onClick={() => handleSubmit("draft")}
+                disabled={!hasContent || isPublishing}
+              >
+                Save Draft
+              </Button>
+              <Button
+                className="rounded-full px-8"
+                onClick={() => handleSubmit("published")}
+                disabled={!hasContent || isPublishing}
+              >
+                Publish
+              </Button>
+            </div>
           </div>
           <p className="mt-3 text-sm text-muted-foreground">
             By {loaderData.name} &middot; {loaderData.location}

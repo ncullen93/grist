@@ -21,7 +21,15 @@ class BlogPostViewSet(viewsets.ModelViewSet):
         )
         author_slug = self.request.query_params.get("author")
         if author_slug:
+            # Author's own dashboard: show all posts (drafts + published)
             qs = qs.filter(author__profile__slug=author_slug)
+        elif self.action in ("retrieve", "update", "partial_update", "destroy", "comment", "like"):
+            # Allow authors to access their own drafts; others see published only
+            from django.db.models import Q
+            qs = qs.filter(Q(status="published") | Q(author=self.request.user))
+        else:
+            # Public feed: published only
+            qs = qs.filter(status="published")
         return qs
 
     def get_serializer_class(self):
