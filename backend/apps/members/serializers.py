@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Follow, MemberProfile, MemberSettings
+from .models import Follow, Invitation, MemberProfile, MemberSettings, SupportRequest
 
 
 class MemberProfileListSerializer(serializers.ModelSerializer):
@@ -20,7 +20,7 @@ class MemberProfileDetailSerializer(serializers.ModelSerializer):
         fields = [
             "slug", "name", "location", "state", "home_style", "home_year",
             "home_name", "bio", "photo", "tags", "member_since", "registry",
-            "story", "profile_visibility", "is_following",
+            "story", "onboarding_completed", "profile_visibility", "is_following",
         ]
 
     def get_is_following(self, obj):
@@ -36,7 +36,7 @@ class MemberProfileUpdateSerializer(serializers.ModelSerializer):
         fields = [
             "name", "location", "state", "home_style", "home_year",
             "home_name", "bio", "photo", "tags", "registry", "story",
-            "profile_visibility",
+            "onboarding_completed", "profile_visibility",
         ]
 
 
@@ -44,3 +44,22 @@ class MemberSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = MemberSettings
         fields = ["email_notifications", "event_reminders", "forum_digest", "direct_messages"]
+
+
+class SupportRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SupportRequest
+        fields = ["id", "type", "subject", "message", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+
+class InvitationSerializer(serializers.ModelSerializer):
+    invite_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Invitation
+        fields = ["id", "email", "code", "invite_url", "created_at"]
+        read_only_fields = ["id", "code", "invite_url", "created_at"]
+
+    def get_invite_url(self, obj):
+        return f"/join/{obj.code}"

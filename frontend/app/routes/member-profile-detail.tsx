@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link, useFetcher, useSearchParams } from "react-router";
 import { ArrowLeft, Plus, Check } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
@@ -8,7 +7,7 @@ import {
   TabsTrigger,
   TabsContent,
 } from "~/components/ui/tabs";
-import { apiGet } from "~/lib/api.server";
+import { apiGet, apiPost, apiDelete } from "~/lib/api.server";
 import { redirect } from "react-router";
 import type { Route } from "./+types/member-profile-detail";
 
@@ -24,6 +23,28 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     if (e instanceof Response) throw e;
     return redirect("/login");
   }
+}
+
+export async function action({ request, params }: Route.ActionArgs) {
+  const formData = await request.formData();
+  const intent = formData.get("intent") as string;
+  const slug = params.slug;
+
+  try {
+    if (intent === "follow") {
+      const res = await apiPost(request, `/api/members/${slug}/follow/`);
+      if (!res.ok) return { error: "Failed to follow." };
+      return { following: true };
+    }
+    if (intent === "unfollow") {
+      const res = await apiDelete(request, `/api/members/${slug}/follow/`);
+      if (!res.ok) return { error: "Failed to unfollow." };
+      return { following: false };
+    }
+  } catch {
+    return { error: "Unable to connect to server." };
+  }
+  return null;
 }
 
 /** Render the story field, handling both legacy string[] and Block[] formats. */
@@ -95,7 +116,10 @@ export default function MemberProfileDetailPage({
     else next.set("tab", value);
     setSearchParams(next, { replace: true });
   };
-  const [isFollowing, setIsFollowing] = useState(member.is_following);
+  const followFetcher = useFetcher();
+
+  // Optimistic: use fetcher result if available, else loader data
+  const isFollowing = followFetcher.data?.following ?? member.is_following;
 
   return (
     <>
@@ -127,7 +151,13 @@ export default function MemberProfileDetailPage({
           <Button
             variant={isFollowing ? "outline" : "default"}
             className="rounded-full px-8 shrink-0"
-            onClick={() => setIsFollowing(!isFollowing)}
+            onClick={() =>
+              followFetcher.submit(
+                { intent: isFollowing ? "unfollow" : "follow" },
+                { method: "post" },
+              )
+            }
+            disabled={followFetcher.state !== "idle"}
           >
             {isFollowing ? (
               <>

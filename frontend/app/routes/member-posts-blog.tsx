@@ -107,10 +107,7 @@ export async function action({ request, params }: Route.ActionArgs) {
       const err = await res.json().catch(() => ({}));
       return { error: err.detail || "Failed to save." };
     }
-    if (postStatus === "published") {
-      return redirect(`/m/blog/${params.id}`);
-    }
-    return { saved: true };
+    return { saved: true, published: postStatus === "published" };
   } catch {
     return { error: "Unable to connect to server." };
   }
@@ -129,7 +126,12 @@ export default function BlogEditorPage({ loaderData }: Route.ComponentProps) {
   useEffect(() => {
     if (publishFetcher.state !== "idle") return;
     if (publishFetcher.data?.saved) {
-      toast.success("Saved");
+      if (publishFetcher.data.published) {
+        toast.success("Published");
+        setStatus("published");
+      } else {
+        toast.success("Saved");
+      }
     }
   }, [publishFetcher.state, publishFetcher.data]);
 
@@ -186,10 +188,6 @@ export default function BlogEditorPage({ loaderData }: Route.ComponentProps) {
       { title, content: JSON.stringify(cleanBlocks), status: submitStatus },
       { method: "post" },
     );
-
-    if (submitStatus === "published") {
-      setStatus("published");
-    }
   };
 
   return (

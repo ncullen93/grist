@@ -27,7 +27,7 @@ interface User {
 const navItems = [
   {
     title: "Home",
-    url: "/m",
+    url: "/m/home",
     icon: Home,
     exact: true,
   },

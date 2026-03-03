@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Link, useSearchParams } from "react-router";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Link, useFetcher, useSearchParams, redirect } from "react-router";
 import {
   Search,
   SlidersHorizontal,
@@ -7,6 +7,7 @@ import {
   Mail,
   Link2,
   Check,
+  Loader2,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -20,12 +21,23 @@ import {
   Dialog,
   DialogTrigger,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
 } from "~/components/ui/dialog";
 import { PageHeader } from "~/components/page-header";
-import { allMembers } from "~/lib/demo-data";
+import { apiGet, apiPost } from "~/lib/api.server";
+import type { Route } from "./+types/member-directory";
+
+interface MemberItem {
+  slug: string;
+  name: string;
+  location: string;
+  state: string;
+  home_style: string;
+  home_year: number | null;
+  home_name: string;
+  photo: string;
+  tags: string[];
+  member_since: string;
+}
 
 const styleOptions = [
   "All",
@@ -47,28 +59,109 @@ const eraOptions = [
   { label: "Post-1900", min: 1901, max: 9999 },
 ];
 
-const PER_PAGE = 18;
+export async function loader({ request }: Route.LoaderArgs) {
+  const url = new URL(request.url);
+  const search = url.searchParams.get("search") || "";
+  const homeStyle = url.searchParams.get("home_style") || "";
+  const eraLabel = url.searchParams.get("era") || "";
+  const page = url.searchParams.get("page") || "1";
+
+  const params = new URLSearchParams();
+  params.set("page", page);
+  if (search) params.set("search", search);
+  if (homeStyle) params.set("home_style", homeStyle);
+
+  const era = eraOptions.find((e) => e.label === eraLabel);
+  if (era && eraLabel !== "All") {
+    params.set("era_min", String(era.min));
+    params.set("era_max", String(era.max));
+  }
+
+  try {
+    const res = await apiGet(request, `/api/members/?${params}`);
+    if (!res.ok) return redirect("/login");
+    const data = await res.json();
+    return {
+      results: data.results as MemberItem[],
+      nextPage: data.next ? String(Number(page) + 1) : null,
+      count: data.count as number,
+      page: Number(page),
+    };
+  } catch {
+    return redirect("/login");
+  }
+}
+
+export async function action({ request }: Route.ActionArgs) {
+  const formData = await request.formData();
+  const intent = formData.get("intent") as string;
+
+  if (intent === "invite-email") {
+    const email = formData.get("email") as string;
+    try {
+      const res = await apiPost(request, "/api/members/invite/", { email });
+      if (!res.ok) return { error: "Failed to send invite." };
+      return { invited: true };
+    } catch {
+      return { error: "Unable to connect to server." };
+    }
+  }
+
+  if (intent === "invite-link") {
+    try {
+      const res = await apiGet(request, "/api/members/invite-link/");
+      if (!res.ok) return { error: "Failed to get invite link." };
+      const data = await res.json();
+      return { inviteUrl: data.invite_url as string };
+    } catch {
+      return { error: "Unable to connect to server." };
+    }
+  }
+
+  return null;
+}
 
 function InviteDialog() {
   const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
+  const emailFetcher = useFetcher();
+  const linkFetcher = useFetcher();
+
+  const sent = emailFetcher.data?.invited;
+  const inviteUrl = linkFetcher.data?.inviteUrl;
   const [copied, setCopied] = useState(false);
 
-  const inviteLink = `${typeof window !== "undefined" ? window.location.origin : ""}/join/abc123`;
+  // Fetch invite link on mount
+  useEffect(() => {
+    if (linkFetcher.state === "idle" && !linkFetcher.data) {
+      linkFetcher.submit({ intent: "invite-link" }, { method: "post" });
+    }
+  }, []);
 
   const handleSend = () => {
     if (!email.trim()) return;
-    setSent(true);
-    setTimeout(() => {
-      setSent(false);
-      setEmail("");
-    }, 2000);
+    emailFetcher.submit(
+      { intent: "invite-email", email },
+      { method: "post" },
+    );
   };
 
+  useEffect(() => {
+    if (sent) {
+      const t = setTimeout(() => setEmail(""), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [sent]);
+
+  const fullUrl = typeof window !== "undefined" && inviteUrl
+    ? `${window.location.origin}${inviteUrl}`
+    : "";
+
   const handleCopy = () => {
-    navigator.clipboard.writeText(inviteLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (fullUrl) {
+      navigator.clipboard.writeText(fullUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
@@ -92,8 +185,7 @@ function InviteDialog() {
           </div>
           <Button
             onClick={handleSend}
-            disabled={!email.trim() || sent}
-            className="shrink-0"
+            disabled={!email.trim() || emailFetcher.state !== "idle"}
           >
             {sent ? (
               <>
@@ -123,10 +215,10 @@ function InviteDialog() {
           <div className="flex flex-1 items-center rounded-lg border border-border bg-muted/30 px-3 py-2">
             <Link2 className="mr-2.5 size-4 shrink-0 text-muted-foreground" />
             <span className="truncate text-sm text-muted-foreground">
-              {inviteLink}
+              {fullUrl || "Loading..."}
             </span>
           </div>
-          <Button variant="outline" onClick={handleCopy} className="shrink-0">
+          <Button variant="outline" onClick={handleCopy} disabled={!fullUrl} className="shrink-0">
             {copied ? (
               <>
                 <Check className="size-4" />
@@ -142,44 +234,88 @@ function InviteDialog() {
   );
 }
 
-export default function MemberDirectoryPage() {
-  const [searchParams] = useSearchParams();
-  const initialSearch = searchParams.get("search") ?? "";
-  const [search, setSearch] = useState(initialSearch);
-  const [styleFilter, setStyleFilter] = useState("All");
-  const [eraFilter, setEraFilter] = useState("All");
-  const [visibleCount, setVisibleCount] = useState(PER_PAGE);
+export default function MemberDirectoryPage({ loaderData }: Route.ComponentProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchInput, setSearchInput] = useState(
+    searchParams.get("search") || "",
+  );
+  const [items, setItems] = useState(loaderData.results);
+  const [nextPage, setNextPage] = useState(loaderData.nextPage);
+  const fetcher = useFetcher();
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    const era = eraOptions.find((e) => e.label === eraFilter) ?? eraOptions[0];
+  const styleFilter = searchParams.get("home_style") || "All";
+  const eraFilter = searchParams.get("era") || "All";
 
-    return allMembers.filter((m) => {
-      const searchMatch =
-        !q ||
-        m.name.toLowerCase().includes(q) ||
-        m.location.toLowerCase().includes(q) ||
-        m.homeStyle.toLowerCase().includes(q) ||
-        m.homeName.toLowerCase().includes(q) ||
-        m.tags.some((t) => t.toLowerCase().includes(q));
+  // Reset when loaderData changes (new search/filter)
+  useEffect(() => {
+    setItems(loaderData.results);
+    setNextPage(loaderData.nextPage);
+  }, [loaderData]);
 
-      const styleMatch = styleFilter === "All" || m.homeStyle === styleFilter;
+  // Append fetcher results for infinite scroll
+  useEffect(() => {
+    if (fetcher.data?.results) {
+      setItems((prev) => [...prev, ...fetcher.data!.results]);
+      setNextPage(fetcher.data.nextPage);
+    }
+  }, [fetcher.data]);
 
-      const eraMatch = m.homeYear >= era.min && m.homeYear <= era.max;
+  // IntersectionObserver for infinite scroll
+  const loadMore = useCallback(() => {
+    if (!nextPage || fetcher.state !== "idle") return;
+    const params = new URLSearchParams(searchParams);
+    params.set("page", nextPage);
+    fetcher.load(`/m/members?${params}`);
+  }, [nextPage, fetcher.state, searchParams]);
 
-      return searchMatch && styleMatch && eraMatch;
-    });
-  }, [search, styleFilter, eraFilter]);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) loadMore();
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
-  const visible = filtered.slice(0, visibleCount);
+  // Debounced search
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const next = new URLSearchParams(searchParams);
+      next.delete("page");
+      if (value) next.set("search", value);
+      else next.delete("search");
+      setSearchParams(next, { replace: true });
+    }, 300);
+  };
 
-  const resetAndSet = <T,>(setter: (v: T) => void, value: T) => {
-    setter(value);
-    setVisibleCount(PER_PAGE);
+  const setStyleFilter = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("page");
+    if (value === "All") next.delete("home_style");
+    else next.set("home_style", value);
+    setSearchParams(next, { replace: true });
+  };
+
+  const setEraFilter = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("page");
+    if (value === "All") next.delete("era");
+    else next.set("era", value);
+    setSearchParams(next, { replace: true });
   };
 
   const hasActiveFilters =
-    styleFilter !== "All" || eraFilter !== "All" || search;
+    styleFilter !== "All" || eraFilter !== "All" || searchInput;
+
+  const isLoadingMore = fetcher.state === "loading";
 
   return (
     <>
@@ -191,8 +327,8 @@ export default function MemberDirectoryPage() {
             <Search className="mr-3 size-4 shrink-0 text-muted-foreground" />
             <Input
               type="text"
-              value={search}
-              onChange={(e) => resetAndSet(setSearch, e.target.value)}
+              value={searchInput}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search by name, location, or home style..."
               className="h-auto border-0 bg-transparent px-0 py-0 shadow-none focus-visible:ring-0 focus-visible:border-0"
             />
@@ -216,7 +352,7 @@ export default function MemberDirectoryPage() {
               {styleOptions.map((s) => (
                 <DropdownMenuItem
                   key={s}
-                  onSelect={() => resetAndSet(setStyleFilter, s)}
+                  onSelect={() => setStyleFilter(s)}
                   className={styleFilter === s ? "font-medium" : ""}
                 >
                   {s}
@@ -242,7 +378,7 @@ export default function MemberDirectoryPage() {
               {eraOptions.map((e) => (
                 <DropdownMenuItem
                   key={e.label}
-                  onSelect={() => resetAndSet(setEraFilter, e.label)}
+                  onSelect={() => setEraFilter(e.label)}
                   className={eraFilter === e.label ? "font-medium" : ""}
                 >
                   {e.label}
@@ -269,14 +405,13 @@ export default function MemberDirectoryPage() {
         {hasActiveFilters && (
           <div className="mb-6 flex items-center gap-2">
             <span className="text-xs text-muted-foreground">
-              {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+              {loaderData.count} result{loaderData.count !== 1 ? "s" : ""}
             </span>
             <button
               onClick={() => {
-                setSearch("");
-                setStyleFilter("All");
-                setEraFilter("All");
-                setVisibleCount(PER_PAGE);
+                setSearchInput("");
+                const next = new URLSearchParams();
+                setSearchParams(next, { replace: true });
               }}
               className="text-xs text-primary hover:underline"
             >
@@ -287,7 +422,7 @@ export default function MemberDirectoryPage() {
 
         {/* Member grid */}
         <div>
-          {visible.length === 0 ? (
+          {items.length === 0 ? (
             <div className="rounded-xl border border-border p-16 text-center">
               <p className="text-sm text-muted-foreground">
                 No members match your filters.
@@ -295,7 +430,7 @@ export default function MemberDirectoryPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {visible.map((member) => (
+              {items.map((member) => (
                 <Link
                   key={member.slug}
                   to={`/m/members/${member.slug}`}
@@ -307,9 +442,11 @@ export default function MemberDirectoryPage() {
                       alt={member.name}
                       className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
-                    <span className="absolute top-3 right-3 rounded-full bg-black/50 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
-                      {member.homeYear}
-                    </span>
+                    {member.home_year && (
+                      <span className="absolute top-3 right-3 rounded-full bg-black/50 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                        {member.home_year}
+                      </span>
+                    )}
                   </div>
                   <div className="mt-3">
                     <h3 className="font-display text-base font-semibold text-foreground">
@@ -324,15 +461,11 @@ export default function MemberDirectoryPage() {
             </div>
           )}
 
-          {/* Load more */}
-          {filtered.length > visibleCount && (
-            <div className="mt-10 flex justify-center">
-              <button
-                onClick={() => setVisibleCount((c) => c + PER_PAGE)}
-                className="rounded-full border border-border px-8 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
-              >
-                Load more
-              </button>
+          {/* Sentinel + loading indicator */}
+          <div ref={sentinelRef} className="h-1" />
+          {isLoadingMore && (
+            <div className="flex justify-center py-8">
+              <Loader2 className="size-5 animate-spin text-muted-foreground" />
             </div>
           )}
         </div>

@@ -86,7 +86,7 @@ class SignupView(APIView):
             type="welcome",
             title="Welcome to Grist Club!",
             body="Start by exploring the forum, connecting with members, and RSVPing to events.",
-            href="/m",
+            href="/m/home",
         )
 
         login(request, user)

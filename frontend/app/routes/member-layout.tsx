@@ -17,12 +17,16 @@ import { NotificationPanel } from "~/components/notification-panel";
 
 export async function loader({ request }: Route.LoaderArgs) {
   try {
-    const res = await apiGet(request, "/api/auth/me/");
-    if (!res.ok) {
+    const [authRes, notifRes] = await Promise.all([
+      apiGet(request, "/api/auth/me/"),
+      apiGet(request, "/api/notifications/unread-count/"),
+    ]);
+    if (!authRes.ok) {
       return redirect("/login");
     }
-    const user = await res.json();
-    return { user };
+    const user = await authRes.json();
+    const notifData = notifRes.ok ? await notifRes.json() : { count: 0 };
+    return { user, unreadNotificationCount: notifData.count as number };
   } catch {
     return redirect("/login");
   }
@@ -59,7 +63,7 @@ export default function MemberLayout({ loaderData }: Route.ComponentProps) {
               <div className="flex justify-end items-center h-18 px-8 pointer-events-none">
                 <div className="pointer-events-auto flex items-center gap-3">
                   <HelpDialog />
-                  <NotificationPanel />
+                  <NotificationPanel initialUnreadCount={loaderData.unreadNotificationCount} />
                   <Popover
                     open={avatarPopoverOpen}
                     onOpenChange={setAvatarPopoverOpen}

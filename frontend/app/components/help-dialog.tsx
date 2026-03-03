@@ -1,11 +1,11 @@
 import { useState } from "react";
+import { useFetcher } from "react-router";
 import { HelpCircle, Send } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
 
@@ -17,20 +17,29 @@ const requestTypes = [
 
 export function HelpDialog() {
   const [open, setOpen] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [type, setType] = useState("help");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const fetcher = useFetcher();
+
+  const submitted = fetcher.data?.success;
+  const error = fetcher.data?.error;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSubmitted(true);
+    fetcher.submit(
+      { type, subject, message },
+      { method: "post", action: "/m/help" },
+    );
   }
 
   function handleClose(next: boolean) {
     setOpen(next);
     if (!next) {
       setTimeout(() => {
-        setSubmitted(false);
         setType("help");
+        setSubject("");
+        setMessage("");
       }, 200);
     }
   }
@@ -100,6 +109,8 @@ export function HelpDialog() {
                   id="help-subject"
                   type="text"
                   required
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
                   placeholder="Brief summary"
                   className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring"
                 />
@@ -115,10 +126,15 @@ export function HelpDialog() {
                   id="help-message"
                   required
                   rows={4}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
                   placeholder="Describe your issue or idea..."
                   className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                 />
               </div>
+              {error && (
+                <p className="text-sm text-destructive">{error}</p>
+              )}
               <div className="flex justify-end gap-2 pt-2">
                 <Button
                   type="button"
@@ -127,7 +143,9 @@ export function HelpDialog() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit">Submit</Button>
+                <Button type="submit" disabled={fetcher.state !== "idle"}>
+                  Submit
+                </Button>
               </div>
             </form>
           </>

@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Link, useSearchParams, useNavigate } from "react-router";
+import { Link, useSearchParams, useNavigate, useFetcher, redirect } from "react-router";
 import { Heart, MessageCircle, Check, ChevronRight, ChevronDown, FileText, MessageSquare, Store } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Progress } from "~/components/ui/progress";
@@ -11,15 +10,58 @@ import {
   DropdownMenuItem,
 } from "~/components/ui/dropdown-menu";
 import { PageHeader } from "~/components/page-header";
-import {
-  allMembers,
-  allEvents,
-  allPosts,
-  allMicroPosts,
-} from "~/lib/demo-data";
+import { apiGet, apiPatch } from "~/lib/api.server";
+import type { Route } from "./+types/member-home";
 
-const upcomingEvents = allEvents.filter((e) => e.status === "upcoming");
-const recentMembers = allMembers.slice(0, 3);
+interface BlogPost {
+  id: number;
+  author_slug: string;
+  author_name: string;
+  author_photo: string;
+  author_location: string;
+  title: string;
+  content: string;
+  image: string;
+  likes_count: number;
+  comment_count: number;
+  time: string;
+}
+
+interface EventItem {
+  id: number;
+  title: string;
+  subtitle: string;
+  date: string;
+  time: string;
+  type: string;
+  status: string;
+  image: string;
+  spots: number | null;
+  attendees: number;
+}
+
+interface ForumPost {
+  id: number;
+  author_slug: string;
+  author_name: string;
+  location: string;
+  home_photo: string;
+  title: string;
+  body: string;
+  image: string;
+  likes_count: number;
+  reply_count: number;
+  time: string;
+}
+
+interface MemberItem {
+  slug: string;
+  name: string;
+  location: string;
+  home_style: string;
+  home_year: number | null;
+  photo: string;
+}
 
 const onboardingItems = [
   { id: "profile", title: "Fill out your profile", href: "/m/profile" },
@@ -29,73 +71,103 @@ const onboardingItems = [
   { id: "events", title: "View our events", href: "/m/events" },
 ];
 
-const followedSlugs = new Set(["margaret-h", "eleanor-m"]);
-const followedNames = new Set(
-  allMembers.filter((m) => followedSlugs.has(m.slug)).map((m) => m.name),
-);
+export async function loader({ request }: Route.LoaderArgs) {
+  const url = new URL(request.url);
+  const audience = url.searchParams.get("tab") || "all";
+
+  try {
+    const res = await apiGet(request, `/api/feed/?audience=${audience}`);
+    if (!res.ok) return redirect("/login");
+    const data = await res.json();
+    return {
+      onboardingCompleted: data.onboarding_completed as string[],
+      stats: data.stats as { member_count: number; forum_post_count: number; upcoming_event_count: number },
+      blogPosts: data.blog_posts as BlogPost[],
+      upcomingEvents: data.upcoming_events as EventItem[],
+      forumPosts: data.popular_forum_posts as ForumPost[],
+      recentMembers: data.recent_members as MemberItem[],
+    };
+  } catch {
+    return redirect("/login");
+  }
+}
+
+export async function action({ request }: Route.ActionArgs) {
+  const formData = await request.formData();
+  const completed = formData.get("onboarding_completed") as string;
+  try {
+    const res = await apiPatch(request, "/api/members/me/", {
+      onboarding_completed: JSON.parse(completed),
+    });
+    if (!res.ok) return { error: "Failed to save." };
+    return { saved: true };
+  } catch {
+    return { error: "Unable to connect to server." };
+  }
+}
 
 type FeedItemType = "post" | "event" | "forum" | "member";
 type AudienceType = "all" | "following";
 
 type FeedItem =
-  | { type: "post"; data: (typeof allMicroPosts)[number] }
-  | { type: "event"; data: (typeof allEvents)[number] }
-  | { type: "forum"; data: (typeof allPosts)[number] }
-  | { type: "member"; data: (typeof allMembers)[number] };
+  | { type: "post"; data: BlogPost }
+  | { type: "event"; data: EventItem }
+  | { type: "forum"; data: ForumPost }
+  | { type: "member"; data: MemberItem };
 
-const sortedForumPosts = [...allPosts]
-  .sort((a, b) => b.likes - a.likes)
-  .slice(0, 4);
-
-function buildFeed(): FeedItem[] {
+function buildFeed(
+  posts: BlogPost[],
+  events: EventItem[],
+  forums: ForumPost[],
+  members: MemberItem[],
+): FeedItem[] {
   const items: FeedItem[] = [];
   const sources = {
-    post: [...allMicroPosts],
-    event: [...upcomingEvents],
-    forum: [...sortedForumPosts],
-    member: [...recentMembers],
+    post: [...posts],
+    event: [...events],
+    forum: [...forums],
+    member: [...members],
   };
   const idx = { post: 0, event: 0, forum: 0, member: 0 };
 
-  // Pattern: post, post, event, post, forum, post, member — then repeat
   const pattern: FeedItemType[] = [
-    "post",
-    "post",
-    "event",
-    "post",
-    "forum",
-    "post",
-    "member",
+    "post", "post", "event", "post", "forum", "post", "member",
   ];
 
   const totalItems =
-    sources.post.length +
-    sources.event.length +
-    sources.forum.length +
-    sources.member.length;
+    sources.post.length + sources.event.length +
+    sources.forum.length + sources.member.length;
 
   let patternPos = 0;
   for (let safety = 0; safety < totalItems + pattern.length; safety++) {
     if (items.length >= totalItems) break;
-
     const type = pattern[patternPos % pattern.length];
     patternPos++;
-
     if (idx[type] < sources[type].length) {
       items.push({ type, data: sources[type][idx[type]++] } as FeedItem);
-    } else {
-      // This type is exhausted — try the next type in pattern
-      // but don't skip, the loop will naturally move on
     }
   }
 
   return items;
 }
 
-const allFeedItems = buildFeed();
+/**
+ * Extract a plain-text snippet from content that may be JSON blocks.
+ */
+function contentSnippet(content: string): string {
+  try {
+    const blocks = JSON.parse(content);
+    if (Array.isArray(blocks)) {
+      return blocks
+        .filter((b: { type: string; content?: string }) => b.type === "text" && b.content?.trim())
+        .map((b: { content: string }) => b.content)
+        .join(" ");
+    }
+  } catch {}
+  return content;
+}
 
-
-export default function MemberHomePage() {
+export default function MemberHomePage({ loaderData }: Route.ComponentProps) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const audience = (searchParams.get("tab") || "all") as AudienceType;
@@ -105,30 +177,32 @@ export default function MemberHomePage() {
     else next.set("tab", value);
     setSearchParams(next, { replace: true });
   };
-  const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
 
-  const completedCount = completedItems.size;
+  const fetcher = useFetcher();
+  const completedSet = new Set(loaderData.onboardingCompleted || []);
+  const completedCount = completedSet.size;
   const totalCount = onboardingItems.length;
   const firstIncompleteIndex = onboardingItems.findIndex(
-    (item) => !completedItems.has(item.id),
+    (item) => !completedSet.has(item.id),
   );
 
   function handleOnboardingClick(id: string) {
-    setCompletedItems((prev) => new Set([...prev, id]));
+    if (completedSet.has(id)) return;
+    const updated = [...loaderData.onboardingCompleted, id];
+    fetcher.submit(
+      { onboarding_completed: JSON.stringify(updated) },
+      { method: "post" },
+    );
   }
 
-  const filteredItems = allFeedItems.filter((item) => {
-    if (audience === "following") {
-      if (item.type === "post") {
-        return followedSlugs.has(item.data.authorSlug);
-      }
-      if (item.type === "forum") {
-        return followedNames.has(item.data.author);
-      }
-    }
+  const feedItems = buildFeed(
+    loaderData.blogPosts,
+    loaderData.upcomingEvents,
+    loaderData.forumPosts,
+    loaderData.recentMembers,
+  );
 
-    return true;
-  });
+  const { stats } = loaderData;
 
   return (
     <>
@@ -159,7 +233,7 @@ export default function MemberHomePage() {
                   onClick={() => handleOnboardingClick(item.id)}
                   className="flex items-center gap-4 px-6 py-3.5 border-t border-border hover:bg-muted/50 transition-colors"
                 >
-                  {completedItems.has(item.id) ? (
+                  {completedSet.has(item.id) ? (
                     <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
                       <Check className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
                     </div>
@@ -167,7 +241,7 @@ export default function MemberHomePage() {
                     <div className="w-6 h-6 rounded-full border-2 border-border shrink-0" />
                   )}
                   <span
-                    className={`text-sm flex-1 ${completedItems.has(item.id) ? "text-muted-foreground" : ""}`}
+                    className={`text-sm flex-1 ${completedSet.has(item.id) ? "text-muted-foreground" : ""}`}
                   >
                     {item.title}
                   </span>
@@ -197,11 +271,11 @@ export default function MemberHomePage() {
         {/* Quick stats */}
         <div className="mb-4 grid grid-cols-3 rounded-lg border border-border overflow-hidden">
           {[
-            { label: "Members", value: "342", href: "/m/members" },
-            { label: "Forum Posts", value: "89", href: "/m/forum" },
+            { label: "Members", value: String(stats.member_count), href: "/m/members" },
+            { label: "Forum Posts", value: String(stats.forum_post_count), href: "/m/forum" },
             {
               label: "Upcoming Events",
-              value: String(upcomingEvents.length),
+              value: String(stats.upcoming_event_count),
               href: "/m/events",
             },
           ].map((stat, i) => (
@@ -254,39 +328,25 @@ export default function MemberHomePage() {
 
         {/* Feed */}
         <div className="mt-8 space-y-5">
-          {filteredItems.length === 0 ? (
+          {feedItems.length === 0 ? (
             <div className="rounded-xl border border-border p-16 text-center">
               <p className="text-sm text-muted-foreground">
                 {audience === "following"
                   ? "No updates from people you follow."
-                  : "Nothing to show for this filter."}
+                  : "Nothing to show yet."}
               </p>
             </div>
           ) : (
-            filteredItems.map((item) => {
+            feedItems.map((item) => {
               switch (item.type) {
                 case "post":
-                  return (
-                    <PostCard key={`post-${item.data.id}`} post={item.data} />
-                  );
+                  return <PostCard key={`post-${item.data.id}`} post={item.data} />;
                 case "event":
-                  return (
-                    <EventCard
-                      key={`event-${item.data.id}`}
-                      event={item.data}
-                    />
-                  );
+                  return <EventCard key={`event-${item.data.id}`} event={item.data} />;
                 case "forum":
-                  return (
-                    <ForumCard key={`forum-${item.data.id}`} post={item.data} />
-                  );
+                  return <ForumCard key={`forum-${item.data.id}`} post={item.data} />;
                 case "member":
-                  return (
-                    <MemberCard
-                      key={`member-${item.data.slug}`}
-                      member={item.data}
-                    />
-                  );
+                  return <MemberCard key={`member-${item.data.slug}`} member={item.data} />;
               }
             })
           )}
@@ -296,7 +356,7 @@ export default function MemberHomePage() {
   );
 }
 
-function PostCard({ post }: { post: (typeof allMicroPosts)[number] }) {
+function PostCard({ post }: { post: BlogPost }) {
   return (
     <Link
       to={`/m/blog/${post.id}`}
@@ -313,16 +373,16 @@ function PostCard({ post }: { post: (typeof allMicroPosts)[number] }) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
-              src={post.authorPhoto}
+              src={post.author_photo}
               alt=""
               className="size-9 rounded-full object-cover"
             />
             <div>
               <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                {post.authorName}
+                {post.author_name}
               </span>
               <p className="text-xs text-muted-foreground">
-                {post.authorLocation} &middot; {post.time}
+                {post.author_location} &middot; {post.time}
               </p>
             </div>
           </div>
@@ -330,17 +390,22 @@ function PostCard({ post }: { post: (typeof allMicroPosts)[number] }) {
             Post
           </span>
         </div>
-        <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">
-          {post.content}
+        {post.title && (
+          <h3 className="mt-4 font-display text-base font-semibold text-foreground group-hover:text-primary transition-colors">
+            {post.title}
+          </h3>
+        )}
+        <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground line-clamp-2">
+          {contentSnippet(post.content)}
         </p>
         <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <Heart className="size-4" />
-            {post.likes}
+            {post.likes_count}
           </span>
           <span className="flex items-center gap-1.5">
             <MessageCircle className="size-4" />
-            {post.comments.length}
+            {post.comment_count}
           </span>
         </div>
       </div>
@@ -348,22 +413,24 @@ function PostCard({ post }: { post: (typeof allMicroPosts)[number] }) {
   );
 }
 
-function EventCard({ event }: { event: (typeof allEvents)[number] }) {
+function EventCard({ event }: { event: EventItem }) {
   return (
     <Link
       to={`/m/events/${event.id}`}
       className="group block overflow-hidden rounded-xl border border-border"
     >
-      <div className="relative aspect-video overflow-hidden">
-        <img
-          src={event.image}
-          alt={event.title}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-        <span className="absolute top-3 right-3 rounded-full bg-black/50 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
-          {event.type}
-        </span>
-      </div>
+      {event.image && (
+        <div className="relative aspect-video overflow-hidden">
+          <img
+            src={event.image}
+            alt={event.title}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+          <span className="absolute top-3 right-3 rounded-full bg-black/50 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+            {event.type}
+          </span>
+        </div>
+      )}
       <div className="px-8 py-6">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -387,7 +454,7 @@ function EventCard({ event }: { event: (typeof allEvents)[number] }) {
   );
 }
 
-function ForumCard({ post }: { post: (typeof allPosts)[number] }) {
+function ForumCard({ post }: { post: ForumPost }) {
   return (
     <Link
       to={`/m/forum/${post.id}`}
@@ -406,13 +473,13 @@ function ForumCard({ post }: { post: (typeof allPosts)[number] }) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
-              src={post.homePhoto}
+              src={post.home_photo}
               alt=""
               className="size-9 rounded-full object-cover"
             />
             <div>
               <span className="text-sm font-medium text-foreground">
-                {post.author}
+                {post.author_name}
               </span>
               <p className="text-xs text-muted-foreground">
                 {post.location} &middot; {post.time}
@@ -427,15 +494,15 @@ function ForumCard({ post }: { post: (typeof allPosts)[number] }) {
           {post.title}
         </h3>
         <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
-          <span>{post.likes} likes</span>
-          <span>{post.replies.length} replies</span>
+          <span>{post.likes_count} likes</span>
+          <span>{post.reply_count} replies</span>
         </div>
       </div>
     </Link>
   );
 }
 
-function MemberCard({ member }: { member: (typeof allMembers)[number] }) {
+function MemberCard({ member }: { member: MemberItem }) {
   return (
     <Link
       to={`/m/members/${member.slug}`}
@@ -451,8 +518,8 @@ function MemberCard({ member }: { member: (typeof allMembers)[number] }) {
           {member.name}
         </p>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          {member.location} &middot; {member.homeStyle} &middot;{" "}
-          {member.homeYear}
+          {member.location} &middot; {member.home_style} &middot;{" "}
+          {member.home_year}
         </p>
       </div>
       <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary shrink-0">

@@ -30,7 +30,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   if (!meRes.ok) return redirect("/login");
   const user = await meRes.json();
-  if (!user.is_staff) return redirect("/m");
+  if (!user.is_staff) return redirect("/m/home");
 
   const eventsData = await eventsRes.json();
   const membersData = await membersRes.json();

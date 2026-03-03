@@ -37,7 +37,8 @@ export default [
 
   // Member dashboard (sidebar layout)
   route("m", "routes/member-layout.tsx", [
-    index("routes/member-home.tsx"),
+    index("routes/member-redirect-home.tsx"),
+    route("home", "routes/member-home.tsx"),
     route("forum", "routes/member-forum.tsx"),
     route("forum/:id", "routes/member-forum-detail.tsx"),
     route("marketplace", "routes/member-marketplace.tsx"),
@@ -58,6 +59,10 @@ export default [
     route("posts/edit-forum/:id", "routes/member-posts-edit-forum.tsx"),
     route("posts/edit-marketplace/:id", "routes/member-posts-edit-marketplace.tsx"),
     route("blog", "routes/member-blog.tsx"),
+
+    // Resource routes (no UI)
+    route("notifications", "routes/member-notifications.tsx"),
+    route("help", "routes/member-help.tsx"),
 
     // Admin
     route("admin", "routes/admin.tsx"),

@@ -8,7 +8,7 @@ from apps.blog.views import BlogPostViewSet
 from apps.events.views import EventViewSet
 from apps.forum.views import ChannelViewSet, ForumPostViewSet, TopicViewSet
 from apps.marketplace.views import ListingTagViewSet, ListingViewSet
-from apps.members.views import MemberProfileViewSet, MemberSettingsView
+from apps.members.views import MemberProfileViewSet, MemberSettingsView, SupportRequestView
 from apps.notifications.views import NotificationViewSet
 
 router = DefaultRouter()
@@ -27,6 +27,7 @@ urlpatterns = [
     path("api/", include(router.urls)),
     path("api/auth/", include("apps.accounts.urls")),
     path("api/settings/", MemberSettingsView.as_view(), name="member-settings"),
+    path("api/support/", SupportRequestView.as_view(), name="support-request"),
 ]
 
 # HomeFeedView

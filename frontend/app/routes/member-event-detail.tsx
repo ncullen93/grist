@@ -1,29 +1,64 @@
-import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useFetcher, redirect } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { getEventById, allMembers } from "~/lib/demo-data";
+import { apiGet, apiPost } from "~/lib/api.server";
 import type { Route } from "./+types/member-event-detail";
 
-export function loader({ params }: Route.LoaderArgs) {
-  const event = getEventById(Number(params.id));
-  if (!event) {
-    throw new Response("Event not found", { status: 404 });
+interface EventDetail {
+  id: number;
+  title: string;
+  subtitle: string;
+  description: string;
+  date: string;
+  time: string;
+  type: string;
+  status: string;
+  image: string;
+  spots: number | null;
+  featured: boolean;
+  attendees: number;
+  rsvped: boolean;
+  long_description: string[];
+  agenda: { time: string; title: string }[];
+  speaker: { name: string; role: string } | null;
+}
+
+export async function loader({ request, params }: Route.LoaderArgs) {
+  try {
+    const res = await apiGet(request, `/api/events/${params.id}/`);
+    if (!res.ok) {
+      if (res.status === 404) throw new Response("Event not found", { status: 404 });
+      return redirect("/login");
+    }
+    return { event: (await res.json()) as EventDetail };
+  } catch (e) {
+    if (e instanceof Response) throw e;
+    return redirect("/login");
   }
-  return { event };
+}
+
+export async function action({ request, params }: Route.ActionArgs) {
+  try {
+    const res = await apiPost(request, `/api/events/${params.id}/rsvp/`);
+    if (!res.ok) return { error: "Failed to update RSVP." };
+    return await res.json();
+  } catch {
+    return { error: "Unable to connect to server." };
+  }
 }
 
 export default function MemberEventDetailPage({
   loaderData,
 }: Route.ComponentProps) {
-  const [event, setEvent] = useState(loaderData.event);
+  const fetcher = useFetcher();
+
+  // Use optimistic data from fetcher if available
+  const rsvped = fetcher.data?.rsvped ?? loaderData.event.rsvped;
+  const attendees = fetcher.data?.attendees ?? loaderData.event.attendees;
+  const event = loaderData.event;
 
   const toggleRsvp = () => {
-    setEvent((prev) => ({
-      ...prev,
-      rsvped: !prev.rsvped,
-      attendees: prev.rsvped ? prev.attendees - 1 : prev.attendees + 1,
-    }));
+    fetcher.submit(null, { method: "post" });
   };
 
   return (
@@ -69,23 +104,26 @@ export default function MemberEventDetailPage({
 
           {event.status === "upcoming" && (
             <Button
-              variant={event.rsvped ? "outline" : "default"}
+              variant={rsvped ? "outline" : "default"}
               className="rounded-full px-8 shrink-0"
               onClick={toggleRsvp}
+              disabled={fetcher.state !== "idle"}
             >
-              {event.rsvped ? "Cancel RSVP" : "RSVP"}
+              {rsvped ? "Cancel RSVP" : "RSVP"}
             </Button>
           )}
         </div>
 
         {/* Hero image */}
-        <div className="mt-8 overflow-hidden rounded-xl">
-          <img
-            src={event.image.replace(/w=\d+&h=\d+/, "w=900&h=500")}
-            alt={event.title}
-            className="aspect-video w-full object-cover"
-          />
-        </div>
+        {event.image && (
+          <div className="mt-8 overflow-hidden rounded-xl">
+            <img
+              src={event.image}
+              alt={event.title}
+              className="aspect-video w-full object-cover"
+            />
+          </div>
+        )}
 
         {/* Details bar */}
         <div className="mt-12 grid grid-cols-3 gap-8 rounded-xl bg-[#e8ece5] p-8">
@@ -110,7 +148,7 @@ export default function MemberEventDetailPage({
               Attendees
             </p>
             <p className="mt-2 text-sm font-medium text-foreground">
-              {event.attendees}
+              {attendees}
               {event.spots ? ` / ${event.spots}` : ""}
             </p>
           </div>
@@ -134,16 +172,18 @@ export default function MemberEventDetailPage({
         )}
 
         {/* Full description */}
-        <div className="mt-12 space-y-6">
-          {event.longDescription.map((paragraph, i) => (
-            <p
-              key={i}
-              className="text-[15px] leading-relaxed text-muted-foreground"
-            >
-              {paragraph}
-            </p>
-          ))}
-        </div>
+        {event.long_description && event.long_description.length > 0 && (
+          <div className="mt-12 space-y-6">
+            {event.long_description.map((paragraph, i) => (
+              <p
+                key={i}
+                className="text-[15px] leading-relaxed text-muted-foreground"
+              >
+                {paragraph}
+              </p>
+            ))}
+          </div>
+        )}
 
         {/* Agenda */}
         {event.agenda && event.agenda.length > 0 && (
@@ -167,55 +207,27 @@ export default function MemberEventDetailPage({
           </div>
         )}
 
-        {/* Attendees */}
-        {(() => {
-          const attendeeMembers = allMembers.slice(
-            0,
-            Math.min(event.attendees, allMembers.length),
-          );
-          const remaining = event.attendees - attendeeMembers.length;
-          return (
-            <div className="mt-12">
-              <h2 className="font-display text-2xl font-semibold text-foreground">
-                {event.status === "past" ? "Who Attended" : "Who\u2019s Going"}
-              </h2>
-              <div className="mt-5 flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="flex -space-x-3">
-                    {attendeeMembers.map((member) => (
-                      <Link
-                        key={member.slug}
-                        to={`/m/members/${member.slug}`}
-                        className="relative hover:z-10 transition-transform hover:scale-110"
-                      >
-                        <img
-                          src={member.photo}
-                          alt={member.name}
-                          className="h-10 w-10 rounded-full object-cover ring-2 ring-background"
-                        />
-                      </Link>
-                    ))}
-                  </div>
-                  {remaining > 0 && (
-                    <span className="ml-3 text-sm text-muted-foreground">
-                      +{remaining} others
-                    </span>
-                  )}
-                </div>
-                {event.status === "upcoming" && (
-                  <Button
-                    variant={event.rsvped ? "outline" : "default"}
-                    className="rounded-full px-8 shrink-0"
-                    onClick={toggleRsvp}
-                  >
-                    {event.rsvped ? "Cancel RSVP" : "RSVP"}
-                  </Button>
-                )}
-              </div>
-            </div>
-          );
-        })()}
-
+        {/* Attendees count */}
+        <div className="mt-12">
+          <h2 className="font-display text-2xl font-semibold text-foreground">
+            {event.status === "past" ? "Who Attended" : "Who\u2019s Going"}
+          </h2>
+          <div className="mt-5 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {attendees} {attendees === 1 ? "attendee" : "attendees"}
+            </p>
+            {event.status === "upcoming" && (
+              <Button
+                variant={rsvped ? "outline" : "default"}
+                className="rounded-full px-8 shrink-0"
+                onClick={toggleRsvp}
+                disabled={fetcher.state !== "idle"}
+              >
+                {rsvped ? "Cancel RSVP" : "RSVP"}
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     </>
   );

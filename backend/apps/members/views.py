@@ -8,12 +8,14 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
 from .filters import MemberProfileFilter
-from .models import Follow, MemberProfile, MemberSettings
+from .models import Follow, Invitation, MemberProfile, MemberSettings, SupportRequest
 from .serializers import (
+    InvitationSerializer,
     MemberProfileDetailSerializer,
     MemberProfileListSerializer,
     MemberProfileUpdateSerializer,
     MemberSettingsSerializer,
+    SupportRequestSerializer,
 )
 
 
@@ -64,6 +66,20 @@ class MemberProfileViewSet(viewsets.ModelViewSet):
         Follow.objects.filter(follower=request.user, following=target.user).delete()
         return Response({"status": "unfollowed"})
 
+    @action(detail=False, methods=["post"], url_path="invite")
+    def invite(self, request):
+        email = request.data.get("email", "")
+        invitation = Invitation.objects.create(inviter=request.user, email=email)
+        return Response(InvitationSerializer(invitation).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=["get"], url_path="invite-link")
+    def invite_link(self, request):
+        invitation, created = Invitation.objects.get_or_create(
+            inviter=request.user, email="",
+            defaults={"inviter": request.user},
+        )
+        return Response(InvitationSerializer(invitation).data)
+
 
 class MemberSettingsView(generics.RetrieveUpdateAPIView):
     serializer_class = MemberSettingsSerializer
@@ -71,3 +87,10 @@ class MemberSettingsView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         obj, _ = MemberSettings.objects.get_or_create(user=self.request.user)
         return obj
+
+
+class SupportRequestView(generics.CreateAPIView):
+    serializer_class = SupportRequestSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)

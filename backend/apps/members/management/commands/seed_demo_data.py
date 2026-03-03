@@ -884,7 +884,7 @@ NOTIFICATIONS = [
         "title": "Welcome to Grist Club!",
         "body": "Start by exploring the forum, connecting with other members, and RSVP-ing to upcoming events.",
         "read": True,
-        "href": "/m",
+        "href": "/m/home",
         "actor_slug": None,
     },
 ]

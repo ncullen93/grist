@@ -34,8 +34,11 @@ class HomeFeedView(APIView):
             blog_posts = blog_posts.filter(author_id__in=following_ids)
             popular_forum = popular_forum.filter(author_id__in=following_ids)
 
+        profile = request.user.profile
+
         return Response(
             {
+                "onboarding_completed": profile.onboarding_completed,
                 "stats": {
                     "member_count": MemberProfile.objects.count(),
                     "forum_post_count": ForumPost.objects.count(),

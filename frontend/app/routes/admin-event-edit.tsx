@@ -17,7 +17,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
   if (!meRes.ok) return redirect("/login");
   const user = await meRes.json();
-  if (!user.is_staff) return redirect("/m");
+  if (!user.is_staff) return redirect("/m/home");
 
   if (!eventRes.ok) return redirect("/m/admin");
   const event = await eventRes.json();

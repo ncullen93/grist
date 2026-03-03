@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useFetcher, redirect } from "react-router";
 import { Button } from "~/components/ui/button";
 import {
   Select,
@@ -8,18 +9,91 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { PageHeader } from "~/components/page-header";
+import { apiGet, apiPatch } from "~/lib/api.server";
+import toast from "react-hot-toast";
+import type { Route } from "./+types/member-settings";
 
-export default function MemberSettingsPage() {
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [eventReminders, setEventReminders] = useState(true);
-  const [forumDigest, setForumDigest] = useState(false);
-  const [directMessages, setDirectMessages] = useState(true);
-  const [profileVisibility, setProfileVisibility] = useState("members");
-  const [settingsSaved, setSettingsSaved] = useState(false);
+export async function loader({ request }: Route.LoaderArgs) {
+  try {
+    const [settingsRes, profileRes] = await Promise.all([
+      apiGet(request, "/api/settings/"),
+      apiGet(request, "/api/members/me/"),
+    ]);
+    if (!settingsRes.ok || !profileRes.ok) return redirect("/login");
+    const settings = await settingsRes.json();
+    const profile = await profileRes.json();
+    return {
+      emailNotifications: settings.email_notifications as boolean,
+      eventReminders: settings.event_reminders as boolean,
+      forumDigest: settings.forum_digest as boolean,
+      directMessages: settings.direct_messages as boolean,
+      profileVisibility: profile.profile_visibility as string,
+    };
+  } catch {
+    return redirect("/login");
+  }
+}
 
-  const handleSettingsSave = () => {
-    setSettingsSaved(true);
-    setTimeout(() => setSettingsSaved(false), 2000);
+export async function action({ request }: Route.ActionArgs) {
+  const formData = await request.formData();
+  const emailNotifications = formData.get("emailNotifications") === "true";
+  const eventReminders = formData.get("eventReminders") === "true";
+  const forumDigest = formData.get("forumDigest") === "true";
+  const directMessages = formData.get("directMessages") === "true";
+  const profileVisibility = formData.get("profileVisibility") as string;
+
+  try {
+    const [settingsRes, profileRes] = await Promise.all([
+      apiPatch(request, "/api/settings/", {
+        email_notifications: emailNotifications,
+        event_reminders: eventReminders,
+        forum_digest: forumDigest,
+        direct_messages: directMessages,
+      }),
+      apiPatch(request, "/api/members/me/", {
+        profile_visibility: profileVisibility,
+      }),
+    ]);
+    if (!settingsRes.ok || !profileRes.ok) {
+      const err = await settingsRes.json().catch(() => ({}));
+      return { error: err.detail || "Failed to save settings." };
+    }
+    return { saved: true };
+  } catch {
+    return { error: "Unable to connect to server." };
+  }
+}
+
+export default function MemberSettingsPage({ loaderData }: Route.ComponentProps) {
+  const [emailNotifications, setEmailNotifications] = useState(loaderData.emailNotifications);
+  const [eventReminders, setEventReminders] = useState(loaderData.eventReminders);
+  const [forumDigest, setForumDigest] = useState(loaderData.forumDigest);
+  const [directMessages, setDirectMessages] = useState(loaderData.directMessages);
+  const [profileVisibility, setProfileVisibility] = useState(loaderData.profileVisibility);
+
+  const fetcher = useFetcher();
+
+  // Show toast on save result
+  if (fetcher.data?.saved) {
+    toast.success("Saved");
+    fetcher.data.saved = false; // prevent re-toast
+  }
+  if (fetcher.data?.error) {
+    toast.error(fetcher.data.error);
+    fetcher.data.error = null;
+  }
+
+  const handleSave = () => {
+    fetcher.submit(
+      {
+        emailNotifications: String(emailNotifications),
+        eventReminders: String(eventReminders),
+        forumDigest: String(forumDigest),
+        directMessages: String(directMessages),
+        profileVisibility,
+      },
+      { method: "post" },
+    );
   };
 
   return (
@@ -116,15 +190,11 @@ export default function MemberSettingsPage() {
         <div className="mt-8 flex items-center gap-4">
           <Button
             className="rounded-full px-8"
-            onClick={handleSettingsSave}
+            onClick={handleSave}
+            disabled={fetcher.state !== "idle"}
           >
-            {settingsSaved ? "Saved!" : "Save changes"}
+            Save changes
           </Button>
-          {settingsSaved && (
-            <p className="text-sm text-primary">
-              Your settings have been updated.
-            </p>
-          )}
         </div>
       </div>
     </>

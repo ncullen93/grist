@@ -1,26 +1,70 @@
-import { useState } from "react";
-import { Link } from "react-router";
+import { useState, useEffect } from "react";
+import { Link, useFetcher } from "react-router";
 import { Bell, CalendarDays, Heart } from "lucide-react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover";
-import { allNotifications, type Notification } from "~/lib/demo-notifications";
 
-export function NotificationPanel() {
+interface Notification {
+  id: number;
+  type: string;
+  title: string;
+  body: string;
+  time: string;
+  read: boolean;
+  href: string;
+  actor_photo: string | null;
+}
+
+export function NotificationPanel({ initialUnreadCount }: { initialUnreadCount: number }) {
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState(allNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
+  const [loaded, setLoaded] = useState(false);
+  const listFetcher = useFetcher();
+  const actionFetcher = useFetcher();
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  // Fetch notifications when popover opens
+  useEffect(() => {
+    if (open && !loaded && listFetcher.state === "idle") {
+      listFetcher.load("/m/notifications");
+    }
+  }, [open]);
+
+  // Update local state when list loads
+  useEffect(() => {
+    if (listFetcher.data?.results) {
+      setNotifications(listFetcher.data.results);
+      setUnreadCount(listFetcher.data.results.filter((n: Notification) => !n.read).length);
+      setLoaded(true);
+    }
+  }, [listFetcher.data]);
+
+  // Handle mark-all-read response
+  useEffect(() => {
+    if (actionFetcher.data?.allRead) {
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadCount(0);
+    }
+  }, [actionFetcher.data]);
 
   function markAllRead() {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    actionFetcher.submit(
+      { intent: "mark-all-read" },
+      { method: "post", action: "/m/notifications" },
+    );
   }
 
   function markRead(id: number) {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
+    );
+    setUnreadCount((c) => Math.max(0, c - 1));
+    actionFetcher.submit(
+      { intent: "mark-read", id: String(id) },
+      { method: "post", action: "/m/notifications" },
     );
     setOpen(false);
   }
@@ -50,13 +94,23 @@ export function NotificationPanel() {
           )}
         </div>
         <div className="max-h-[28rem] overflow-y-auto">
-          {notifications.map((notification) => (
-            <NotificationItem
-              key={notification.id}
-              notification={notification}
-              onRead={markRead}
-            />
-          ))}
+          {!loaded && listFetcher.state === "loading" ? (
+            <div className="px-4 py-8 text-center">
+              <p className="text-xs text-muted-foreground">Loading...</p>
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="px-4 py-8 text-center">
+              <p className="text-xs text-muted-foreground">No notifications yet.</p>
+            </div>
+          ) : (
+            notifications.map((notification) => (
+              <NotificationItem
+                key={notification.id}
+                notification={notification}
+                onRead={markRead}
+              />
+            ))
+          )}
         </div>
       </PopoverContent>
     </Popover>
@@ -79,9 +133,9 @@ function NotificationItem({
       }`}
     >
       <div className="relative shrink-0">
-        {notification.actorPhoto ? (
+        {notification.actor_photo ? (
           <img
-            src={notification.actorPhoto}
+            src={notification.actor_photo}
             alt=""
             className="size-8 rounded-full object-cover"
           />

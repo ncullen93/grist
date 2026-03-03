@@ -1,13 +1,48 @@
-import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
-import { Button } from "~/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
+import { redirect } from "react-router";
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { PageHeader } from "~/components/page-header";
-import { allEvents } from "~/lib/demo-data";
-import type { DemoEvent } from "~/lib/demo-data";
+import { apiGet } from "~/lib/api.server";
+import type { Route } from "./+types/member-events";
 
-export default function MemberEventsPage() {
-  const [events, setEvents] = useState<DemoEvent[]>(allEvents);
+interface EventItem {
+  id: number;
+  title: string;
+  subtitle: string;
+  description: string;
+  date: string;
+  time: string;
+  type: string;
+  status: string;
+  image: string;
+  spots: number | null;
+  featured: boolean;
+  attendees: number;
+  rsvped: boolean;
+}
+
+export async function loader({ request }: Route.LoaderArgs) {
+  const url = new URL(request.url);
+  const tab = url.searchParams.get("tab") || "upcoming";
+
+  try {
+    let res: Response;
+    if (tab === "rsvps") {
+      res = await apiGet(request, "/api/events/my-rsvps/");
+    } else {
+      res = await apiGet(request, `/api/events/?status=${tab}`);
+    }
+    if (!res.ok) return redirect("/login");
+    const data = await res.json();
+    // my-rsvps returns an array, events list returns paginated results
+    const results = Array.isArray(data) ? data : (data.results ?? data);
+    return { events: results as EventItem[], tab };
+  } catch {
+    return redirect("/login");
+  }
+}
+
+export default function MemberEventsPage({ loaderData }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "upcoming";
   const setActiveTab = (value: string) => {
@@ -17,28 +52,9 @@ export default function MemberEventsPage() {
     setSearchParams(next, { replace: true });
   };
 
+  const { events } = loaderData;
   const featured = events.find((e) => e.featured && e.status === "upcoming");
-
-  const displayEvents = events.filter((e) => {
-    if (activeTab === "rsvps") return e.rsvped;
-    return e.status === activeTab;
-  });
-
-  const nonFeatured = displayEvents.filter((e) => !e.featured);
-
-  const toggleRsvp = (id: number) => {
-    setEvents((prev) =>
-      prev.map((e) =>
-        e.id === id
-          ? {
-              ...e,
-              rsvped: !e.rsvped,
-              attendees: e.rsvped ? e.attendees - 1 : e.attendees + 1,
-            }
-          : e,
-      ),
-    );
-  };
+  const nonFeatured = activeTab === "upcoming" ? events.filter((e) => !e.featured) : events;
 
   return (
     <>
