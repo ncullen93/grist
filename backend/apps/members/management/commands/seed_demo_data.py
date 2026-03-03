@@ -943,8 +943,9 @@ class Command(BaseCommand):
         MemberSettings.objects.all().delete()
         MemberProfile.objects.all().delete()
         ActivationCode.objects.all().delete()
-        # Delete non-staff users (demo users)
+        # Delete demo users (non-staff + any leftover @example.com staff)
         User.objects.filter(is_staff=False).delete()
+        User.objects.filter(email__endswith="@example.com").delete()
 
     def _create_users(self):
         """Create User, MemberProfile, and MemberSettings for each member."""
