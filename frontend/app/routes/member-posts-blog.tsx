@@ -2,13 +2,41 @@ import { useState, useRef, useEffect } from "react";
 import { useFetcher } from "react-router";
 import { redirect } from "react-router";
 import toast from "react-hot-toast";
-import type { Route } from "./+types/member-posts-edit-blog";
+import type { Route } from "./+types/member-posts-blog";
 import { apiGet, apiPatch, apiUpload } from "~/lib/api.server";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { PageHeader } from "~/components/page-header";
 import { BlockEditor, newBlockId } from "~/components/block-editor";
 import type { Block } from "~/components/block-editor";
+
+function parseBlocks(content: string): Block[] {
+  if (!content) {
+    return [{ id: newBlockId(), type: "text", content: "", style: "normal" }];
+  }
+  try {
+    const blocks = JSON.parse(content);
+    if (Array.isArray(blocks)) {
+      if (blocks.length === 0) {
+        return [{ id: newBlockId(), type: "text", content: "", style: "normal" }];
+      }
+      return blocks.map(
+        (b: { type: string; style?: string; content?: string; preview?: string }): Block => {
+          if (b.type === "image" && b.preview) {
+            return { id: newBlockId(), type: "image", preview: b.preview };
+          }
+          return {
+            id: newBlockId(),
+            type: "text",
+            content: b.content || "",
+            style: (b.style || "normal") as "normal",
+          };
+        },
+      );
+    }
+  } catch {}
+  return [{ id: newBlockId(), type: "text", content, style: "normal" }];
+}
 
 export async function loader({ request, params }: Route.LoaderArgs) {
   try {
@@ -48,7 +76,7 @@ export async function action({ request, params }: Route.ActionArgs) {
         request,
         "/api/members/upload/",
         body,
-        contentType
+        contentType,
       );
       if (!res.ok) return { error: "Upload failed" };
       const data = await res.json();
@@ -58,10 +86,10 @@ export async function action({ request, params }: Route.ActionArgs) {
     }
   }
 
-  // Update blog post
   const formData = await request.formData();
   const title = formData.get("title") as string;
   const content = formData.get("content") as string;
+  const postStatus = (formData.get("status") as string) || "published";
 
   // Extract first image from blocks as the post image
   let image = "";
@@ -71,53 +99,37 @@ export async function action({ request, params }: Route.ActionArgs) {
     if (imgBlock) image = imgBlock.preview;
   } catch {}
 
-  const newStatus = formData.get("status") as string | null;
-  const patchPayload: Record<string, string> = { title, content, image };
-  if (newStatus) patchPayload.status = newStatus;
+  const payload: Record<string, string> = { title, content, status: postStatus, image };
 
   try {
-    const res = await apiPatch(request, `/api/blog/posts/${params.id}/`, patchPayload);
+    const res = await apiPatch(request, `/api/blog/posts/${params.id}/`, payload);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      return { error: err.detail || "Failed to save post." };
+      return { error: err.detail || "Failed to save." };
     }
-    return newStatus === "published" ? { published: true } : { saved: true };
+    if (postStatus === "published") {
+      return redirect(`/m/blog/${params.id}`);
+    }
+    return { saved: true };
   } catch {
     return { error: "Unable to connect to server." };
   }
 }
 
-function parseBlocks(content: string): Block[] {
-  try {
-    const blocks = JSON.parse(content);
-    if (Array.isArray(blocks)) {
-      return blocks.map((b: { type: string; style?: string; content?: string; preview?: string }): Block => {
-        if (b.type === "image" && b.preview) {
-          return { id: newBlockId(), type: "image", preview: b.preview };
-        }
-        return { id: newBlockId(), type: "text", content: b.content || "", style: (b.style || "normal") as "normal" };
-      });
-    }
-  } catch {}
-  return [{ id: newBlockId(), type: "text", content, style: "normal" }];
-}
-
-export default function EditBlogPostPage({
-  loaderData,
-}: Route.ComponentProps) {
+export default function BlogEditorPage({ loaderData }: Route.ComponentProps) {
   const { post } = loaderData;
   const [title, setTitle] = useState(post.title);
   const [blocks, setBlocks] = useState<Block[]>(() => parseBlocks(post.content));
+  const [status, setStatus] = useState(post.status);
   const publishFetcher = useFetcher();
   const uploadFetcher = useFetcher();
-  const isSaving = publishFetcher.state === "submitting";
+  const isSubmitting = publishFetcher.state === "submitting";
 
+  // Handle save response
   useEffect(() => {
-    if (publishFetcher.state === "idle" && publishFetcher.data?.saved) {
+    if (publishFetcher.state !== "idle") return;
+    if (publishFetcher.data?.saved) {
       toast.success("Saved");
-    }
-    if (publishFetcher.state === "idle" && publishFetcher.data?.published) {
-      toast.success("Published");
     }
   }, [publishFetcher.state, publishFetcher.data]);
 
@@ -154,9 +166,9 @@ export default function EditBlogPostPage({
         (b.type === "text" && b.content.trim() !== "") || b.type === "image",
     );
 
-  const isDraft = post.status === "draft";
+  const isDraft = status !== "published";
 
-  const handleSave = (newStatus?: "published") => {
+  const handleSubmit = (submitStatus: "draft" | "published") => {
     if (!hasContent) return;
     const cleanBlocks = blocks
       .filter(
@@ -170,18 +182,19 @@ export default function EditBlogPostPage({
         return { type: b.type, preview: b.preview };
       });
 
-    const data: Record<string, string> = {
-      title,
-      content: JSON.stringify(cleanBlocks),
-    };
-    if (newStatus) data.status = newStatus;
+    publishFetcher.submit(
+      { title, content: JSON.stringify(cleanBlocks), status: submitStatus },
+      { method: "post" },
+    );
 
-    publishFetcher.submit(data, { method: "post" });
+    if (submitStatus === "published") {
+      setStatus("published");
+    }
   };
 
   return (
     <>
-      <PageHeader title="Edit Blog Post" />
+      <PageHeader title={isDraft ? "New Blog Post" : "Edit Blog Post"} />
       <div className="max-w-4xl mx-auto px-4 md:px-8 pt-8 pb-48">
         {/* Header card */}
         <div className="rounded-xl border border-border bg-background p-6">
@@ -199,15 +212,15 @@ export default function EditBlogPostPage({
                 <Button
                   variant="outline"
                   className="rounded-full px-6"
-                  onClick={() => handleSave()}
-                  disabled={!hasContent || isSaving}
+                  onClick={() => handleSubmit("draft")}
+                  disabled={!hasContent || isSubmitting}
                 >
                   Save Draft
                 </Button>
                 <Button
                   className="rounded-full px-8"
-                  onClick={() => handleSave("published")}
-                  disabled={!hasContent || isSaving}
+                  onClick={() => handleSubmit("published")}
+                  disabled={!hasContent || isSubmitting}
                 >
                   Publish
                 </Button>
@@ -215,8 +228,8 @@ export default function EditBlogPostPage({
             ) : (
               <Button
                 className="rounded-full px-8 shrink-0"
-                onClick={() => handleSave()}
-                disabled={!hasContent || isSaving}
+                onClick={() => handleSubmit("published")}
+                disabled={!hasContent || isSubmitting}
               >
                 Save
               </Button>

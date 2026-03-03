@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Store,
   ChevronDown,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
@@ -139,7 +140,7 @@ function getPostLink(item: UnifiedPost) {
 function getEditLink(item: UnifiedPost) {
   switch (item.type) {
     case "blog":
-      return `/m/posts/edit-blog/${item.data.id}`;
+      return `/m/posts/blog/${item.data.id}`;
     case "forum":
       return `/m/posts/edit-forum/${item.data.id}`;
     case "marketplace":
@@ -206,7 +207,7 @@ function PostCard({
         <div className="flex items-center gap-2">
           <Link to={editLink} className="min-w-0">
             <p className="font-display text-base font-semibold text-foreground group-hover:text-primary transition-colors truncate">
-              {item.data.title}
+              {item.data.title || "Untitled"}
             </p>
           </Link>
           {item.type === "blog" && (item.data as BlogPostItem).status === "draft" && (
@@ -311,10 +312,18 @@ export default function MemberFeedPage({ loaderData }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const deleteFetcher = useFetcher();
   const activeTab = searchParams.get("tab") || "blog";
+  const statusFilter = searchParams.get("status") || "all";
   const setActiveTab = (value: string) => {
     const next = new URLSearchParams(searchParams);
     if (value === "blog") next.delete("tab");
     else next.set("tab", value);
+    next.delete("status");
+    setSearchParams(next, { replace: true });
+  };
+  const setStatusFilter = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === "all") next.delete("status");
+    else next.set("status", value);
     setSearchParams(next, { replace: true });
   };
 
@@ -358,8 +367,15 @@ export default function MemberFeedPage({ loaderData }: Route.ComponentProps) {
   );
 
   const filtered = useMemo(
-    () => live.filter((item) => item.type === activeTab),
-    [live, activeTab],
+    () =>
+      live.filter((item) => {
+        if (item.type !== activeTab) return false;
+        if (statusFilter !== "all" && item.type === "blog") {
+          return (item.data as BlogPostItem).status === statusFilter;
+        }
+        return true;
+      }),
+    [live, activeTab, statusFilter],
   );
 
   const handleDelete = (type: string, id: number) => {
@@ -381,6 +397,35 @@ export default function MemberFeedPage({ loaderData }: Route.ComponentProps) {
               <TabsTrigger value="forum">Forum</TabsTrigger>
               <TabsTrigger value="marketplace">Marketplace</TabsTrigger>
             </TabsList>
+
+            <div className="flex items-center gap-3">
+              {activeTab === "blog" && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className={`flex items-center gap-2 rounded-lg border px-5 py-2.5 text-sm transition-colors hover:bg-muted/50 ${
+                        statusFilter !== "all"
+                          ? "border-primary text-primary"
+                          : "border-border text-muted-foreground"
+                      }`}
+                    >
+                      <SlidersHorizontal className="size-4" />
+                      {statusFilter === "all" ? "Status" : statusFilter === "draft" ? "Drafts" : "Published"}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-40">
+                    {(["all", "draft", "published"] as const).map((value) => (
+                      <DropdownMenuItem
+                        key={value}
+                        onSelect={() => setStatusFilter(value)}
+                        className={statusFilter === value ? "font-medium" : ""}
+                      >
+                        {value === "all" ? "All" : value === "draft" ? "Drafts" : "Published"}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -410,6 +455,7 @@ export default function MemberFeedPage({ loaderData }: Route.ComponentProps) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </div>
           </div>
 
           <TabsContent value="blog">

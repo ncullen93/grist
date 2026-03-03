@@ -11,8 +11,8 @@ class BlogPost(models.Model):
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="blog_posts"
     )
-    title = models.CharField(max_length=300)
-    content = models.TextField()
+    title = models.CharField(max_length=300, blank=True)
+    content = models.TextField(blank=True)
     image = models.CharField(max_length=500, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="published")
     created_at = models.DateTimeField(auto_now_add=True)
