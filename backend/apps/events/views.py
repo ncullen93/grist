@@ -34,8 +34,10 @@ class EventViewSet(viewsets.ModelViewSet):
         rsvp, created = RSVP.objects.get_or_create(event=event, user=request.user)
         if not created:
             rsvp.delete()
-            return Response({"rsvped": False, "attendees": event.rsvps.count()})
-        return Response({"rsvped": True, "attendees": event.rsvps.count()})
+            count = RSVP.objects.filter(event=event).count()
+            return Response({"rsvped": False, "attendees": count})
+        count = RSVP.objects.filter(event=event).count()
+        return Response({"rsvped": True, "attendees": count})
 
     @action(detail=False, methods=["get"], url_path="my-rsvps")
     def my_rsvps(self, request):
