@@ -43,69 +43,39 @@ function VerifyMockup() {
   );
 }
 
-function DirectoryMockup() {
+function BlogMockup() {
   return (
     <div className="w-full space-y-2.5">
-      {/* Search */}
-      <div className="rounded-xl bg-white/80 p-4 shadow-sm backdrop-blur">
-        <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
-          <svg viewBox="0 0 20 20" className="size-3.5 shrink-0 fill-gray-300">
-            <path
-              fillRule="evenodd"
-              d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <p className="text-[9px] text-gray-300">Search members...</p>
+      {/* Featured post */}
+      <div className="overflow-hidden rounded-xl bg-white/80 shadow-sm backdrop-blur">
+        <img
+          src="/mockups/blog-hero.jpg"
+          alt="Historic home interior"
+          className="aspect-2/1 w-full object-cover"
+        />
+        <div className="p-4">
+          <p className="text-[8px] font-medium uppercase tracking-wide text-gray-400">
+            Restoration
+          </p>
+          <p className="mt-1 text-[10px] font-semibold leading-snug text-gray-900">
+            How We Saved Our 1870s Plaster Ceilings
+          </p>
         </div>
       </div>
-      {/* Members */}
+      {/* Post list */}
       <div className="rounded-xl bg-white/80 p-4 shadow-sm backdrop-blur">
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           <div className="flex items-center gap-2.5">
-            <img
-              src="https://images.unsplash.com/photo-1757992141434-983a12b82da3?w=48&h=48&fit=crop&crop=center"
-              alt="Historic home"
-              className="size-6 shrink-0 rounded-full object-cover ring-1 ring-white"
-            />
-            <div className="min-w-0">
-              <p className="text-[10px] font-medium text-gray-900">
-                Sarah M.
-              </p>
-              <p className="text-[8px] text-gray-400">
-                1892 Queen Anne &middot; Salem, MA
-              </p>
-            </div>
+            <div className="size-1.5 shrink-0 rounded-full bg-gray-900" />
+            <p className="text-[9px] text-gray-700">
+              Before &amp; After: Our Kitchen Revival
+            </p>
           </div>
           <div className="flex items-center gap-2.5">
-            <img
-              src="https://images.unsplash.com/photo-1519227355453-8f982e425321?w=48&h=48&fit=crop&crop=center"
-              alt="Historic home"
-              className="size-6 shrink-0 rounded-full object-cover ring-1 ring-white"
-            />
-            <div className="min-w-0">
-              <p className="text-[10px] font-medium text-gray-900">
-                James R.
-              </p>
-              <p className="text-[8px] text-gray-400">
-                1847 Cape Cod &middot; Brewster, MA
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <img
-              src="https://images.unsplash.com/photo-1525883405167-fc4e76c7713a?w=48&h=48&fit=crop&crop=center"
-              alt="Historic home"
-              className="size-6 shrink-0 rounded-full object-cover ring-1 ring-white"
-            />
-            <div className="min-w-0">
-              <p className="text-[10px] font-medium text-gray-900">
-                Meg T.
-              </p>
-              <p className="text-[8px] text-gray-400">
-                1910 Foursquare &middot; Portland, ME
-              </p>
-            </div>
+            <div className="size-1.5 shrink-0 rounded-full bg-gray-900" />
+            <p className="text-[9px] text-gray-700">
+              Living with Lead Paint: A Practical Guide
+            </p>
           </div>
         </div>
       </div>
@@ -119,7 +89,7 @@ function ForumMockup() {
       <div className="space-y-3">
         <div className="flex items-start gap-2.5">
           <img
-            src="https://images.unsplash.com/photo-1519227355453-8f982e425321?w=48&h=48&fit=crop&crop=center"
+            src="/mockups/avatar-1.jpg"
             alt="Historic home"
             className="size-6 shrink-0 rounded-full object-cover ring-1 ring-white"
           />
@@ -133,7 +103,7 @@ function ForumMockup() {
         </div>
         <div className="flex items-start gap-2.5">
           <img
-            src="https://images.unsplash.com/photo-1525883405167-fc4e76c7713a?w=48&h=48&fit=crop&crop=center"
+            src="/mockups/avatar-2.jpg"
             alt="Historic home"
             className="size-6 shrink-0 rounded-full object-cover ring-1 ring-white"
           />
@@ -150,47 +120,46 @@ function ForumMockup() {
   );
 }
 
-function EventMockup() {
+function MarketplaceMockup() {
   return (
     <div className="w-full space-y-2.5">
-      {/* Event card */}
+      {/* Listing */}
       <div className="overflow-hidden rounded-xl bg-white/80 shadow-sm backdrop-blur">
         <img
-          src="https://images.unsplash.com/photo-1745944727434-c6f56248b083?w=400&h=200&fit=crop&crop=center"
-          alt="Historic neighborhood"
-          className="aspect-video w-full object-cover"
+          src="/mockups/marketplace-hero.jpg"
+          alt="Salvaged door hardware"
+          className="aspect-2/1 w-full object-cover"
         />
-        <div className="p-4">
-          <p className="text-[10px] font-semibold text-gray-900">
-            New England Retreat
-          </p>
-          <p className="mt-0.5 text-[8px] text-gray-400">
-            Oct 11&ndash;13 &middot; Litchfield, CT
-          </p>
+        <div className="flex items-center justify-between p-4">
+          <div>
+            <p className="text-[10px] font-semibold text-gray-900">
+              Victorian Door Hardware Set
+            </p>
+            <p className="mt-0.5 text-[8px] text-gray-400">
+              Original brass &middot; c. 1890
+            </p>
+          </div>
+          <span className="text-[10px] font-semibold text-gray-900">$120</span>
         </div>
       </div>
-      {/* Attendees */}
-      <div className="flex items-center justify-between rounded-xl bg-white/80 px-4 py-3 shadow-sm backdrop-blur">
-        <div className="flex -space-x-2">
-          <img
-            src="https://images.unsplash.com/photo-1757992141434-983a12b82da3?w=56&h=56&fit=crop&crop=center"
-            alt="Historic home"
-            className="size-6 rounded-full object-cover ring-2 ring-white"
-          />
-          <img
-            src="https://images.unsplash.com/photo-1519227355453-8f982e425321?w=56&h=56&fit=crop&crop=center"
-            alt="Historic home"
-            className="size-6 rounded-full object-cover ring-2 ring-white"
-          />
-          <img
-            src="https://images.unsplash.com/photo-1525883405167-fc4e76c7713a?w=56&h=56&fit=crop&crop=center"
-            alt="Historic home"
-            className="size-6 rounded-full object-cover ring-2 ring-white"
-          />
+      {/* More listings */}
+      <div className="rounded-xl bg-white/80 p-4 shadow-sm backdrop-blur">
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="size-6 shrink-0 rounded-md bg-gray-200" />
+              <p className="text-[9px] text-gray-700">Reclaimed heart pine</p>
+            </div>
+            <span className="text-[9px] font-medium text-gray-900">$8/ft</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="size-6 shrink-0 rounded-md bg-gray-200" />
+              <p className="text-[9px] text-gray-700">Slate roof tiles (lot)</p>
+            </div>
+            <span className="text-[9px] font-medium text-gray-900">$350</span>
+          </div>
         </div>
-        <span className="rounded-full bg-gray-900 px-3 py-1 text-[8px] font-medium text-white">
-          RSVP
-        </span>
       </div>
     </div>
   );
@@ -205,13 +174,6 @@ const ways = [
     illustration: <VerifyMockup />,
   },
   {
-    title: "Find Your People",
-    description:
-      "Browse a directory of verified owners — searchable by era, style, region, and what they're working on.",
-    bg: "bg-linear-to-br from-[#e8e5ec] to-[#dbd6e2]",
-    illustration: <DirectoryMockup />,
-  },
-  {
     title: "Ask & Answer",
     description:
       "Post a question and get real advice from people who've been through it — not internet strangers guessing.",
@@ -219,11 +181,18 @@ const ways = [
     illustration: <ForumMockup />,
   },
   {
-    title: "Gather Together",
+    title: "Share Your Story",
     description:
-      "Monthly video calls, local meetups, and an annual retreat with home tours, workshops, and good company.",
+      "Write about your restoration journey — before-and-afters, lessons learned, and the history behind your home.",
+    bg: "bg-linear-to-br from-[#e8e5ec] to-[#dbd6e2]",
+    illustration: <BlogMockup />,
+  },
+  {
+    title: "Buy & Sell",
+    description:
+      "Find salvaged materials, period hardware, and specialty supplies from fellow owners who know what matters.",
     bg: "bg-linear-to-br from-[#e5eaec] to-[#d6dde0]",
-    illustration: <EventMockup />,
+    illustration: <MarketplaceMockup />,
   },
 ];
 

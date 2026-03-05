@@ -53,17 +53,11 @@ export default function SignupAddress({ actionData }: Route.ComponentProps) {
         )}
 
         <div>
-          <label
-            htmlFor="address"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Home address
-          </label>
           <Input
             id="address"
             name="address"
             type="text"
-            placeholder="123 Main St, Brewster, MA"
+            placeholder="Home address"
             value={address}
             onChange={(e) => {
               setAddress(e.target.value);
@@ -74,7 +68,7 @@ export default function SignupAddress({ actionData }: Route.ComponentProps) {
           />
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 py-4">
           <div className="h-px flex-1 bg-gray-200" />
           <span className="text-xs font-medium uppercase tracking-wider text-gray-400">
             or
@@ -83,23 +77,17 @@ export default function SignupAddress({ actionData }: Route.ComponentProps) {
         </div>
 
         <div>
-          <label
-            htmlFor="code"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Activation code
-          </label>
           <Input
             id="code"
             name="code"
             type="text"
-            placeholder="GRIST-XXXX-XXXX"
+            placeholder="Activation code"
             value={code}
             onChange={(e) => {
               setCode(e.target.value);
               if (e.target.value) setAddress("");
             }}
-            className="mt-1.5 h-12 bg-white font-mono tracking-wider text-[15px]"
+            className="mt-1.5 h-12 bg-white text-[15px]"
           />
         </div>
       </div>
