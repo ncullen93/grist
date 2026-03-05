@@ -166,28 +166,28 @@ const ways = [
     title: "Verify Your Home",
     description:
       "Enter your address and we'll check it against state and national historic registers. Most verifications take minutes.",
-    bg: "bg-linear-to-br from-[#e8ece5] to-[#dce3d8]",
+    bg: "bg-linear-to-br from-[#ddd9d2] to-[#d1cbc2]",
     illustration: <VerifyMockup />,
   },
   {
     title: "Ask & Answer",
     description:
       "Post a question and get real advice from people who've been through it — not internet strangers guessing.",
-    bg: "bg-linear-to-br from-[#ece9e3] to-[#e2ddd5]",
+    bg: "bg-linear-to-br from-[#d3dbd0] to-[#c6d1bd]",
     illustration: <ForumMockup />,
   },
   {
     title: "Share Your Story",
     description:
       "Write about your restoration journey — before-and-afters, lessons learned, and the history behind your home.",
-    bg: "bg-linear-to-br from-[#e8e5ec] to-[#dbd6e2]",
+    bg: "bg-linear-to-br from-[#e0d2cf] to-[#d5c3bf]",
     illustration: <BlogMockup />,
   },
   {
     title: "Buy & Sell",
     description:
       "Find salvaged materials, period hardware, and specialty supplies from fellow owners who know what matters.",
-    bg: "bg-linear-to-br from-[#e5eaec] to-[#d6dde0]",
+    bg: "bg-linear-to-br from-[#ced8e0] to-[#bfcdd8]",
     illustration: <MarketplaceMockup />,
   },
 ];

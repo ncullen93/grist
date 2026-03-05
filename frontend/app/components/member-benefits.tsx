@@ -187,21 +187,21 @@ const benefits = [
     title: "Verified expertise",
     description:
       "Every member is a verified historic homeowner. When someone answers your question about lime mortar or knob-and-tube, they're speaking from experience — not guessing from a YouTube video.",
-    bg: "from-[#ece5e6] to-[#e0d6d8]",
+    bg: "from-[#e4dccb] to-[#d9d0bc]",
     illustration: <ExpertiseMockup />,
   },
   {
     title: "A real community",
     description:
       "Monthly video meetups, quarterly expert sessions, and an annual retreat. This isn't a feed you scroll past — it's a group of people you actually get to know.",
-    bg: "from-[#e8ece5] to-[#dce3d8]",
+    bg: "from-[#d3dbd0] to-[#c6d1bd]",
     illustration: <CommunityMockup />,
   },
   {
     title: "Unique profiles",
     description:
       "Show off your home — its era, its style, the details you love. Share photos, tag what you're working on, and connect with owners of similar houses.",
-    bg: "from-[#e5e7ec] to-[#d6d9e0]",
+    bg: "from-[#ced8e0] to-[#bfcdd8]",
     illustration: <ProfileMockup />,
   },
 ];
