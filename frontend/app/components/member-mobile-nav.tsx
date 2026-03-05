@@ -1,17 +1,15 @@
 import { Link, useLocation } from "react-router";
 import {
   Home,
-  Rss,
+  MessageSquare,
   CalendarDays,
-  Users,
   UserCircle,
 } from "lucide-react";
 
 const navItems = [
-  { title: "Home", url: "/m/home", icon: Home, exact: true },
-  { title: "Posts", url: "/m/posts", icon: Rss },
+  { title: "Homes", url: "/m/homes", icon: Home, exact: true },
+  { title: "Forum", url: "/m/forum", icon: MessageSquare },
   { title: "Events", url: "/m/events", icon: CalendarDays },
-  { title: "Members", url: "/m/members", icon: Users },
   { title: "Profile", url: "/m/profile", icon: UserCircle },
 ];
 
@@ -19,7 +17,9 @@ export function MemberMobileNav() {
   const location = useLocation();
 
   const isActive = (item: (typeof navItems)[number]) => {
-    if (item.exact) return location.pathname === item.url;
+    if (item.exact) {
+      return location.pathname === item.url || location.pathname === "/m" || location.pathname === "/m/";
+    }
     return location.pathname.startsWith(item.url);
   };
 

@@ -48,7 +48,6 @@ export async function loader({ request }: Route.LoaderArgs) {
   const page = url.searchParams.get("page") || "1";
   const search = url.searchParams.get("search") || "";
   const channel = url.searchParams.get("channel") || "";
-
   const params = new URLSearchParams();
   params.set("page", page);
   if (search) params.set("search", search);
@@ -174,44 +173,25 @@ export default function MemberForumPage({
       )}
 
       <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
-        {/* Search + New Thread */}
+        {/* Search + New */}
         <div className="flex items-center gap-3">
-          <div className="flex flex-1 items-center rounded-lg border border-border bg-background px-4 py-3">
-            <Search className="mr-3 size-4 shrink-0 text-muted-foreground" />
+          <div className="flex flex-1 items-center rounded-lg border border-border bg-background px-3 h-10">
+            <Search className="mr-2.5 size-4 shrink-0 text-muted-foreground" />
             <Input
               type="text"
               value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search threads..."
-              className="h-auto border-0 bg-transparent px-0 py-0 text-base shadow-none focus-visible:ring-0 focus-visible:border-0"
+              className="h-auto border-0 bg-transparent px-0 py-0 text-sm shadow-none focus-visible:ring-0 focus-visible:border-0"
             />
           </div>
-          <Button asChild className="rounded-lg">
-            <Link to="/m/posts/new-forum">
+          <Button asChild size="lg" className="rounded-lg">
+            <Link to="/m/forum/new">
               <Plus className="size-4" />
               New
             </Link>
           </Button>
         </div>
-
-        {/* Channel switcher — show when inside a channel */}
-        {showThreads && loaderData.channels.length > 0 && (
-          <div className="mt-5 flex flex-wrap gap-2">
-            {loaderData.channels.map((ch) => (
-              <Link
-                key={ch.slug}
-                to={`/m/forum?channel=${ch.slug}`}
-                className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                  activeChannel === ch.slug
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
-              >
-                {ch.name}
-              </Link>
-            ))}
-          </div>
-        )}
 
         {/* Main content */}
         <div className="mt-6">
@@ -236,40 +216,51 @@ export default function MemberForumPage({
   );
 }
 
+/* ─── Channel descriptions ─── */
+
+const defaultChannels: { name: string; slug: string }[] = [
+  { name: "Introductions", slug: "introductions" },
+  { name: "Restoration and Repairs", slug: "restoration-and-repairs" },
+  { name: "Contractors and Vendors", slug: "contractors-and-vendors" },
+  { name: "Historic Commissions and Regulations", slug: "historic-commissions-and-regulations" },
+  { name: "Buy, Sell, and Give Away", slug: "buy-sell-and-give-away" },
+  { name: "Weekly Check-In", slug: "weekly-check-in" },
+  { name: "Off Topic", slug: "off-topic" },
+];
+
 /* ─── Channel Directory ─── */
 
 function ChannelDirectory({ channels }: { channels: Channel[] }) {
-  if (channels.length === 0) {
-    return (
-      <div className="rounded-xl border border-border p-16 text-center">
-        <p className="text-base text-muted-foreground">
-          No channels have been created yet.
-        </p>
-      </div>
-    );
-  }
+  // Use API channels if available, otherwise fall back to defaults
+  const displayChannels = channels.length > 0
+    ? channels
+    : defaultChannels.map((ch, i) => ({
+        id: i,
+        name: ch.name,
+        slug: ch.slug,
+        post_count: 0,
+        latest_post_title: null,
+        latest_activity: null,
+      }));
 
   return (
-    <div className="space-y-3">
-      {channels.map((ch) => (
+    <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
+      {displayChannels.map((ch) => (
         <Link
           key={ch.slug}
           to={`/m/forum?channel=${ch.slug}`}
-          className="flex items-center justify-between rounded-xl border border-border px-7 py-6 transition-colors hover:bg-muted/30 group"
+          className="flex items-center justify-between px-7 py-6 transition-colors hover:bg-muted/30 group"
         >
           <div className="min-w-0 flex-1">
             <h3 className="font-display text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
               {ch.name}
             </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {ch.post_count} {ch.post_count === 1 ? "thread" : "threads"}
-              {ch.latest_activity && (
-                <span> &middot; Last active {ch.latest_activity}</span>
-              )}
-            </p>
-            {ch.latest_post_title && (
-              <p className="mt-2 text-sm text-muted-foreground truncate">
-                Latest: {ch.latest_post_title}
+            {ch.post_count > 0 && (
+              <p className="mt-2 text-xs text-muted-foreground/70">
+                {ch.post_count} {ch.post_count === 1 ? "thread" : "threads"}
+                {ch.latest_activity && (
+                  <span> &middot; Last active {ch.latest_activity}</span>
+                )}
               </p>
             )}
           </div>

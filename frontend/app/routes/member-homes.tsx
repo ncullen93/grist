@@ -8,9 +8,11 @@ import {
   Link2,
   Check,
   Loader2,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { Progress } from "~/components/ui/progress";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -23,8 +25,8 @@ import {
   DialogContent,
 } from "~/components/ui/dialog";
 import { PageHeader } from "~/components/page-header";
-import { apiGet, apiPost } from "~/lib/api.server";
-import type { Route } from "./+types/member-directory";
+import { apiGet, apiPost, apiPatch } from "~/lib/api.server";
+import type { Route } from "./+types/member-homes";
 
 interface MemberItem {
   uid: string;
@@ -38,6 +40,8 @@ interface MemberItem {
   photo: string;
   tags: string[];
   member_since: string;
+  bio: string;
+  story_preview: string;
 }
 
 const styleOptions = [
@@ -60,6 +64,13 @@ const eraOptions = [
   { label: "Post-1900", min: 1901, max: 9999 },
 ];
 
+const onboardingItems = [
+  { id: "profile", title: "Set up your home profile", href: "/m/profile" },
+  { id: "story", title: "Write your home's story", href: "/m/profile/overview" },
+  { id: "forum", title: "Introduce yourself in the forum", href: "/m/forum" },
+  { id: "events", title: "Check out upcoming events", href: "/m/events" },
+];
+
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const search = url.searchParams.get("search") || "";
@@ -79,14 +90,29 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
 
   try {
-    const res = await apiGet(request, `/api/members/?${params}`);
-    if (!res.ok) return redirect("/login");
-    const data = await res.json();
+    const [membersRes, feedRes] = await Promise.all([
+      apiGet(request, `/api/members/?${params}`),
+      apiGet(request, `/api/feed/?audience=all`),
+    ]);
+
+    if (!membersRes.ok) return redirect("/login");
+    const membersData = await membersRes.json();
+
+    let onboardingCompleted: string[] = [];
+    let stats = { member_count: 0, forum_post_count: 0, upcoming_event_count: 0 };
+    if (feedRes.ok) {
+      const feedData = await feedRes.json();
+      onboardingCompleted = feedData.onboarding_completed || [];
+      stats = feedData.stats || stats;
+    }
+
     return {
-      results: data.results as MemberItem[],
-      nextPage: data.next ? String(Number(page) + 1) : null,
-      count: data.count as number,
+      results: membersData.results as MemberItem[],
+      nextPage: membersData.next ? String(Number(page) + 1) : null,
+      count: membersData.count as number,
       page: Number(page),
+      onboardingCompleted,
+      stats,
     };
   } catch {
     return redirect("/login");
@@ -96,6 +122,19 @@ export async function loader({ request }: Route.LoaderArgs) {
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
   const intent = formData.get("intent") as string;
+
+  if (intent === "onboarding") {
+    const completed = formData.get("onboarding_completed") as string;
+    try {
+      const res = await apiPatch(request, "/api/members/me/", {
+        onboarding_completed: JSON.parse(completed),
+      });
+      if (!res.ok) return { error: "Failed to save." };
+      return { saved: true };
+    } catch {
+      return { error: "Unable to connect to server." };
+    }
+  }
 
   if (intent === "invite-email") {
     const email = formData.get("email") as string;
@@ -235,7 +274,7 @@ function InviteDialog() {
   );
 }
 
-export default function MemberDirectoryPage({ loaderData }: Route.ComponentProps) {
+export default function MemberHomesPage({ loaderData }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchInput, setSearchInput] = useState(
     searchParams.get("search") || "",
@@ -243,11 +282,30 @@ export default function MemberDirectoryPage({ loaderData }: Route.ComponentProps
   const [items, setItems] = useState(loaderData.results);
   const [nextPage, setNextPage] = useState(loaderData.nextPage);
   const fetcher = useFetcher();
+  const onboardingFetcher = useFetcher();
   const sentinelRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const styleFilter = searchParams.get("home_style") || "All";
   const eraFilter = searchParams.get("era") || "All";
+
+  const completedSet = new Set(loaderData.onboardingCompleted || []);
+  const completedCount = completedSet.size;
+  const totalCount = onboardingItems.length;
+  const firstIncompleteIndex = onboardingItems.findIndex(
+    (item) => !completedSet.has(item.id),
+  );
+
+  const { stats } = loaderData;
+
+  function handleOnboardingClick(id: string) {
+    if (completedSet.has(id)) return;
+    const updated = [...(loaderData.onboardingCompleted || []), id];
+    onboardingFetcher.submit(
+      { intent: "onboarding", onboarding_completed: JSON.stringify(updated) },
+      { method: "post" },
+    );
+  }
 
   // Reset when loaderData changes (new search/filter)
   useEffect(() => {
@@ -268,7 +326,7 @@ export default function MemberDirectoryPage({ loaderData }: Route.ComponentProps
     if (!nextPage || fetcher.state !== "idle") return;
     const params = new URLSearchParams(searchParams);
     params.set("page", nextPage);
-    fetcher.load(`/m/members?${params}`);
+    fetcher.load(`/m/homes?${params}`);
   }, [nextPage, fetcher.state, searchParams]);
 
   useEffect(() => {
@@ -320,18 +378,106 @@ export default function MemberDirectoryPage({ loaderData }: Route.ComponentProps
 
   return (
     <>
-      <PageHeader title="Members" />
+      <PageHeader title="Homes" />
+      <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
+        {/* Getting started checklist */}
+        {completedCount < totalCount && (
+          <div className="mb-6 border border-border rounded-lg overflow-hidden">
+            <div className="px-6 py-5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-semibold text-foreground">
+                  Getting started
+                </h2>
+                <span className="text-xs text-muted-foreground">
+                  {completedCount} of {totalCount}
+                </span>
+              </div>
+              <Progress
+                value={(completedCount / totalCount) * 100}
+                className="h-1.5 mt-4"
+              />
+            </div>
+            <div>
+              {onboardingItems.map((item) => (
+                <Link
+                  key={item.id}
+                  to={item.href}
+                  onClick={() => handleOnboardingClick(item.id)}
+                  className="flex items-center gap-4 px-6 py-3.5 border-t border-border hover:bg-muted/50 transition-colors"
+                >
+                  {completedSet.has(item.id) ? (
+                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
+                      <Check className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
+                    </div>
+                  ) : (
+                    <div className="w-6 h-6 rounded-full border-2 border-border shrink-0" />
+                  )}
+                  <span
+                    className={`text-sm flex-1 ${completedSet.has(item.id) ? "text-muted-foreground" : ""}`}
+                  >
+                    {item.title}
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/40 shrink-0" />
+                </Link>
+              ))}
+            </div>
+            {firstIncompleteIndex >= 0 && (
+              <div className="px-6 py-4 border-t border-border">
+                <Button className="w-full" asChild>
+                  <Link
+                    to={onboardingItems[firstIncompleteIndex].href}
+                    onClick={() =>
+                      handleOnboardingClick(
+                        onboardingItems[firstIncompleteIndex].id,
+                      )
+                    }
+                  >
+                    Next step
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Quick stats */}
+        <div className="mb-6 grid grid-cols-3 rounded-lg border border-border overflow-hidden">
+          {[
+            { label: "Homes", value: String(stats.member_count), href: "/m/homes" },
+            { label: "Forum Threads", value: String(stats.forum_post_count), href: "/m/forum" },
+            {
+              label: "Upcoming Events",
+              value: String(stats.upcoming_event_count),
+              href: "/m/events",
+            },
+          ].map((stat, i) => (
+            <Link
+              key={stat.label}
+              to={stat.href}
+              className={`group px-6 py-6 transition-colors hover:bg-muted/50 ${i < 2 ? "border-r border-border" : ""}`}
+            >
+              <p className="text-2xl font-display font-semibold text-foreground group-hover:text-primary transition-colors">
+                {stat.value}
+              </p>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                {stat.label}
+              </p>
+            </Link>
+          ))}
+        </div>
+      </div>
+
       {/* Sticky search bar */}
       <div className="sticky top-18 z-10 bg-background">
-        <div className="max-w-4xl mx-auto flex items-center gap-3 px-4 md:px-8 py-8">
-          <div className="flex flex-1 items-center rounded-lg border border-border bg-background px-4 py-2.5">
-            <Search className="mr-3 size-4 shrink-0 text-muted-foreground" />
+        <div className="max-w-4xl mx-auto flex items-center gap-3 px-4 md:px-8 py-4">
+          <div className="flex flex-1 items-center rounded-lg border border-border bg-background px-3 h-10">
+            <Search className="mr-2.5 size-4 shrink-0 text-muted-foreground" />
             <Input
               type="text"
               value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Search by name, location, or home style..."
-              className="h-auto border-0 bg-transparent px-0 py-0 shadow-none focus-visible:ring-0 focus-visible:border-0"
+              placeholder="Search homes by name, location, or style..."
+              className="h-auto border-0 bg-transparent px-0 py-0 text-sm shadow-none focus-visible:ring-0 focus-visible:border-0"
             />
           </div>
 
@@ -339,7 +485,7 @@ export default function MemberDirectoryPage({ loaderData }: Route.ComponentProps
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className={`flex items-center gap-2 rounded-lg border px-5 py-2.5 text-sm transition-colors hover:bg-muted/50 ${
+                className={`flex items-center gap-2 rounded-lg border px-5 h-10 text-sm transition-colors hover:bg-muted/50 ${
                   styleFilter !== "All"
                     ? "border-primary text-primary"
                     : "border-border text-muted-foreground"
@@ -366,7 +512,7 @@ export default function MemberDirectoryPage({ loaderData }: Route.ComponentProps
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className={`flex items-center gap-2 rounded-lg border px-5 py-2.5 text-sm transition-colors hover:bg-muted/50 ${
+                className={`flex items-center gap-2 rounded-lg border px-5 h-10 text-sm transition-colors hover:bg-muted/50 ${
                   eraFilter !== "All"
                     ? "border-primary text-primary"
                     : "border-border text-muted-foreground"
@@ -391,7 +537,7 @@ export default function MemberDirectoryPage({ loaderData }: Route.ComponentProps
           {/* Invite button */}
           <Dialog>
             <DialogTrigger asChild>
-              <Button className="rounded-lg">
+              <Button size="lg" className="rounded-lg">
                 <Plus className="size-4" />
                 Invite
               </Button>
@@ -421,41 +567,52 @@ export default function MemberDirectoryPage({ loaderData }: Route.ComponentProps
           </div>
         )}
 
-        {/* Member grid */}
+        {/* Homes feed */}
         <div>
           {items.length === 0 ? (
             <div className="rounded-xl border border-border p-16 text-center">
               <p className="text-sm text-muted-foreground">
-                No members match your filters.
+                No homes match your filters.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-4">
               {items.map((member) => (
                 <Link
                   key={member.uid}
-                  to={`/m/members/${member.uid}`}
-                  className="group"
+                  to={`/m/homes/${member.uid}`}
+                  className="group block rounded-xl border border-border transition-colors hover:border-border/80 hover:bg-muted/30"
                 >
-                  <div className="relative overflow-hidden rounded-xl">
-                    <img
-                      src={member.photo}
-                      alt={member.name}
-                      className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                    {member.home_year && (
-                      <span className="absolute top-3 right-3 rounded-full bg-black/50 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
-                        {member.home_year}
+                  {member.photo && (
+                    <div className="relative overflow-hidden rounded-t-xl">
+                      <img
+                        src={member.photo}
+                        alt={member.name}
+                        className="aspect-video w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      {member.home_year && (
+                        <span className="absolute top-3 right-3 rounded-full bg-black/50 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                          {member.home_year}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <div className="px-6 py-5">
+                    <div className="flex items-baseline gap-3">
+                      <span className="font-display text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                        {member.name}
                       </span>
+                      {member.location && (
+                        <span className="text-sm text-muted-foreground">
+                          {member.location}
+                        </span>
+                      )}
+                    </div>
+                    {member.bio && (
+                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+                        {member.bio}
+                      </p>
                     )}
-                  </div>
-                  <div className="mt-3">
-                    <h3 className="font-display text-base font-semibold text-foreground">
-                      {member.name}
-                    </h3>
-                    <p className="mt-0.5 text-sm text-muted-foreground">
-                      {member.location}
-                    </p>
                   </div>
                 </Link>
               ))}

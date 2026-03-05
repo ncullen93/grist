@@ -16,7 +16,7 @@ export async function action({ request }: Route.ActionArgs) {
       return { error: "Invalid email or password." };
     }
 
-    return redirectWithCookies(res, "/m/home");
+    return redirectWithCookies(res, "/m/homes");
   } catch {
     return { error: "Unable to connect to server. Please try again." };
   }

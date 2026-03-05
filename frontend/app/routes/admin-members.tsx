@@ -110,7 +110,7 @@ export default function AdminMembersPage({ loaderData }: Route.ComponentProps) {
                       >
                         <td className="px-6 py-4">
                           <Link
-                            to={`/m/members/${member.uid}`}
+                            to={`/m/homes/${member.uid}`}
                             className="flex items-center gap-3 hover:text-primary transition-colors"
                           >
                             {member.photo ? (

@@ -32,28 +32,25 @@ export default [
 
   // Member dashboard (sidebar layout)
   route("m", "routes/member-layout.tsx", [
-    index("routes/member-redirect-home.tsx"),
-    route("home", "routes/member-home.tsx"),
+    // Redirect /m to /m/homes
+    index("routes/member-redirect-homes.tsx"),
+    route("homes", "routes/member-homes.tsx"),
+    route("homes/:uid", "routes/member-home-detail.tsx"),
+
+    // Forum
     route("forum", "routes/member-forum.tsx"),
     route("forum/:id", "routes/member-forum-detail.tsx"),
-    route("marketplace", "routes/member-marketplace.tsx"),
-    route("marketplace/:id", "routes/member-marketplace-detail.tsx"),
+    route("forum/new", "routes/member-posts-new-forum.tsx"),
+    route("forum/edit/:id", "routes/member-posts-edit-forum.tsx"),
+
+    // Events
     route("events", "routes/member-events.tsx"),
     route("events/:id", "routes/member-event-detail.tsx"),
-    route("members", "routes/member-directory.tsx"),
-    route("members/:uid", "routes/member-profile-detail.tsx"),
+
+    // Profile & Settings
     route("profile", "routes/member-profile.tsx"),
     route("profile/overview", "routes/member-profile-overview.tsx"),
     route("settings", "routes/member-settings.tsx"),
-    route("posts", "routes/member-feed.tsx"),
-    route("blog/:id", "routes/member-feed-detail.tsx"),
-    route("posts/new-blog", "routes/member-posts-new-blog-redirect.tsx"),
-    route("posts/blog/:id", "routes/member-posts-blog.tsx"),
-    route("posts/new-forum", "routes/member-posts-new-forum.tsx"),
-    route("posts/new-marketplace", "routes/member-posts-new-marketplace.tsx"),
-    route("posts/edit-forum/:id", "routes/member-posts-edit-forum.tsx"),
-    route("posts/edit-marketplace/:id", "routes/member-posts-edit-marketplace.tsx"),
-    route("blog", "routes/member-blog.tsx"),
 
     // Resource routes (no UI)
     route("notifications", "routes/member-notifications.tsx"),
@@ -65,11 +62,6 @@ export default [
     route("admin/events/new", "routes/admin-event-create.tsx"),
     route("admin/events/:id/edit", "routes/admin-event-edit.tsx"),
     route("admin/members", "routes/admin-members.tsx"),
-    route("admin/blog", "routes/admin-blog.tsx"),
     route("admin/forum", "routes/admin-forum.tsx"),
-    route("admin/marketplace", "routes/admin-marketplace.tsx"),
-    route("admin/applications", "routes/admin-applications.tsx"),
-    route("admin/support", "routes/admin-support.tsx"),
-    route("admin/analytics", "routes/admin-analytics.tsx"),
   ]),
 ] satisfies RouteConfig;

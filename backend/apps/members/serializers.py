@@ -8,7 +8,7 @@ class MemberProfileListSerializer(serializers.ModelSerializer):
         model = MemberProfile
         fields = [
             "uid", "slug", "name", "location", "state", "home_style", "home_year",
-            "home_name", "photo", "tags", "member_since",
+            "home_name", "bio", "photo", "tags", "member_since",
         ]
 
 

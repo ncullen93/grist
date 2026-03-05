@@ -4,14 +4,10 @@ import {
   Home,
   MessageSquare,
   CalendarDays,
-  Users,
   UserCircle,
   Settings,
   PanelLeft,
   PanelLeftClose,
-  Plus,
-  Store,
-  BookOpen,
   Shield,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
@@ -26,22 +22,10 @@ interface User {
 
 const navItems = [
   {
-    title: "Home",
-    url: "/m/home",
+    title: "Homes",
+    url: "/m/homes",
     icon: Home,
     exact: true,
-  },
-  {
-    title: "Posts",
-    url: "/m/posts",
-    icon: Plus,
-  },
-  {
-    title: "Blog",
-    url: "/m/blog",
-    icon: BookOpen,
-    spaceBefore: true,
-    sectionLabel: "Share",
   },
   {
     title: "Forum",
@@ -49,28 +33,15 @@ const navItems = [
     icon: MessageSquare,
   },
   {
-    title: "Marketplace",
-    url: "/m/marketplace",
-    icon: Store,
-  },
-  {
     title: "Events",
     url: "/m/events",
     icon: CalendarDays,
-    spaceBefore: true,
-    sectionLabel: "Connect",
-  },
-  {
-    title: "Members",
-    url: "/m/members",
-    icon: Users,
   },
   {
     title: "Profile",
     url: "/m/profile",
     icon: UserCircle,
     spaceBefore: true,
-    sectionLabel: "Manage",
   },
   {
     title: "Settings",
@@ -91,10 +62,12 @@ export function MemberSidebar({ user }: { user?: User }) {
 
   const initial = user?.first_name?.charAt(0).toUpperCase() || "G";
   const displayName = user?.first_name || "Grist Club";
-  const profileUrl = user?.profile_uid ? `/m/members/${user.profile_uid}` : "/m/profile";
+  const profileUrl = user?.profile_uid ? `/m/homes/${user.profile_uid}` : "/m/profile";
 
   const isActive = (item: (typeof navItems)[number]) => {
-    if (item.exact) return location.pathname === item.url;
+    if (item.exact) {
+      return location.pathname === item.url || location.pathname === "/m" || location.pathname === "/m/";
+    }
     return location.pathname.startsWith(item.url);
   };
 
@@ -163,15 +136,10 @@ export function MemberSidebar({ user }: { user?: User }) {
 
           return (
             <div key={item.title}>
-              {item.sectionLabel && (
-                <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 px-3 mt-6 mb-2">
-                  {item.sectionLabel}
-                </div>
-              )}
               <Link
                 to={item.url}
                 className={`flex items-center gap-4 px-3 py-1.5 rounded-lg transition-colors ${
-                  item.spaceBefore && !item.sectionLabel ? "mt-4" : ""
+                  item.spaceBefore ? "mt-4" : ""
                 } ${
                   active
                     ? "bg-secondary font-medium text-foreground"

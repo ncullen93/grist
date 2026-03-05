@@ -26,15 +26,9 @@ export async function loader({ request }: Route.LoaderArgs) {
   const tab = url.searchParams.get("tab") || "upcoming";
 
   try {
-    let res: Response;
-    if (tab === "rsvps") {
-      res = await apiGet(request, "/api/events/my-rsvps/");
-    } else {
-      res = await apiGet(request, `/api/events/?status=${tab}`);
-    }
+    const res = await apiGet(request, `/api/events/?status=${tab}`);
     if (!res.ok) return redirect("/login");
     const data = await res.json();
-    // my-rsvps returns an array, events list returns paginated results
     const results = Array.isArray(data) ? data : (data.results ?? data);
     return { events: results as EventItem[], tab };
   } catch {
@@ -64,7 +58,6 @@ export default function MemberEventsPage({ loaderData }: Route.ComponentProps) {
           <TabsList>
             <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
             <TabsTrigger value="past">Past</TabsTrigger>
-            <TabsTrigger value="rsvps">RSVPs</TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -108,9 +101,7 @@ export default function MemberEventsPage({ loaderData }: Route.ComponentProps) {
           {nonFeatured.length === 0 ? (
             <div className="rounded-xl border border-border p-16 text-center">
               <p className="text-sm text-muted-foreground">
-                {activeTab === "rsvps"
-                  ? "You haven\u2019t RSVP\u2019d to any events yet."
-                  : "No events to show."}
+                No events to show.
               </p>
             </div>
           ) : (

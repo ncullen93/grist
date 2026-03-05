@@ -28,8 +28,8 @@ export function Hero() {
         <div>
           <p className="max-w-sm text-[15px] leading-relaxed text-gray-600">
             Grist Club is an exclusive place for verified owners of historic
-            homes to meet online and in person, share our passion, and receive
-            important advice.
+            homes to share our passion, exchange knowledge, and meet online or
+            in person.
           </p>
 
           <div className="mt-7">

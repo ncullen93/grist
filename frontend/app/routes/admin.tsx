@@ -6,12 +6,7 @@ import { PageHeader } from "~/components/page-header";
 import {
   CalendarDays,
   Users,
-  BookOpen,
   MessageSquare,
-  Store,
-  ClipboardList,
-  LifeBuoy,
-  BarChart3,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -38,40 +33,10 @@ const cards: { title: string; description: string; icon: LucideIcon; href: strin
     href: "/m/admin/members",
   },
   {
-    title: "Blog",
-    description: "Moderate blog posts and comments",
-    icon: BookOpen,
-    href: "/m/admin/blog",
-  },
-  {
     title: "Forum",
     description: "Manage channels, topics, and posts",
     icon: MessageSquare,
     href: "/m/admin/forum",
-  },
-  {
-    title: "Marketplace",
-    description: "Moderate listings, tags, and replies",
-    icon: Store,
-    href: "/m/admin/marketplace",
-  },
-  {
-    title: "Applications",
-    description: "Review membership applications and codes",
-    icon: ClipboardList,
-    href: "/m/admin/applications",
-  },
-  {
-    title: "Support",
-    description: "Help requests, bug reports, and suggestions",
-    icon: LifeBuoy,
-    href: "/m/admin/support",
-  },
-  {
-    title: "Analytics",
-    description: "Site-wide statistics and engagement",
-    icon: BarChart3,
-    href: "/m/admin/analytics",
   },
 ];
 

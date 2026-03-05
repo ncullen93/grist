@@ -5,9 +5,7 @@ import {
   Check,
   Heart,
   MessageCircle,
-  FileText,
   MessageSquare,
-  Store,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
@@ -18,7 +16,7 @@ import {
 } from "~/components/ui/tabs";
 import { apiGet, apiPost, apiDelete } from "~/lib/api.server";
 import { redirect } from "react-router";
-import type { Route } from "./+types/member-profile-detail";
+import type { Route } from "./+types/member-home-detail";
 
 interface EventItem {
   id: number;
@@ -35,7 +33,7 @@ interface EventItem {
 }
 
 interface PostItem {
-  type: "blog" | "forum" | "marketplace";
+  type: "forum";
   id: number;
   title: string;
   image: string;
@@ -47,14 +45,11 @@ interface PostItem {
 
 export async function loader({ request, params }: Route.LoaderArgs) {
   try {
-    const [memberRes, blogRes, forumRes, listingRes, eventsRes] =
-      await Promise.all([
-        apiGet(request, `/api/members/${params.uid}/`),
-        apiGet(request, `/api/blog/posts/?author=${params.uid}`),
-        apiGet(request, `/api/forum/posts/?author=${params.uid}`),
-        apiGet(request, `/api/marketplace/listings/?author=${params.uid}`),
-        apiGet(request, `/api/members/${params.uid}/events/`),
-      ]);
+    const [memberRes, forumRes, eventsRes] = await Promise.all([
+      apiGet(request, `/api/members/${params.uid}/`),
+      apiGet(request, `/api/forum/posts/?author=${params.uid}`),
+      apiGet(request, `/api/members/${params.uid}/events/`),
+    ]);
 
     if (!memberRes.ok) {
       if (memberRes.status === 404)
@@ -63,82 +58,31 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     }
 
     const member = await memberRes.json();
-    const blogData = blogRes.ok ? await blogRes.json() : { results: [] };
     const forumData = forumRes.ok ? await forumRes.json() : { results: [] };
-    const listingData = listingRes.ok
-      ? await listingRes.json()
-      : { results: [] };
     const eventsData: EventItem[] = eventsRes.ok
       ? await eventsRes.json()
       : [];
 
-    // Build unified posts list
-    const posts: PostItem[] = [
-      ...(blogData.results || []).map(
-        (p: {
-          id: number;
-          title: string;
-          image: string;
-          likes_count: number;
-          comment_count: number;
-          time: string;
-          created_at: string;
-          status: string;
-        }) =>
-          p.status === "published"
-            ? {
-                type: "blog" as const,
-                id: p.id,
-                title: p.title,
-                image: p.image,
-                likes_count: p.likes_count,
-                replies: p.comment_count,
-                time: p.time,
-                created_at: p.created_at,
-              }
-            : null,
-      ),
-      ...(forumData.results || []).map(
-        (p: {
-          id: number;
-          title: string;
-          image: string;
-          likes_count: number;
-          reply_count: number;
-          time: string;
-          created_at: string;
-        }) => ({
-          type: "forum" as const,
-          id: p.id,
-          title: p.title,
-          image: p.image,
-          likes_count: p.likes_count,
-          replies: p.reply_count,
-          time: p.time,
-          created_at: p.created_at,
-        }),
-      ),
-      ...(listingData.results || []).map(
-        (p: {
-          id: number;
-          title: string;
-          image: string;
-          likes_count: number;
-          reply_count: number;
-          time: string;
-          created_at: string;
-        }) => ({
-          type: "marketplace" as const,
-          id: p.id,
-          title: p.title,
-          image: p.image,
-          likes_count: p.likes_count,
-          replies: p.reply_count,
-          time: p.time,
-          created_at: p.created_at,
-        }),
-      ),
-    ].filter(Boolean) as PostItem[];
+    const posts: PostItem[] = (forumData.results || []).map(
+      (p: {
+        id: number;
+        title: string;
+        image: string;
+        likes_count: number;
+        reply_count: number;
+        time: string;
+        created_at: string;
+      }) => ({
+        type: "forum" as const,
+        id: p.id,
+        title: p.title,
+        image: p.image,
+        likes_count: p.likes_count,
+        replies: p.reply_count,
+        time: p.time,
+        created_at: p.created_at,
+      }),
+    );
 
     posts.sort(
       (a, b) =>
@@ -237,36 +181,11 @@ function StoryContent({ story }: { story: unknown[] | null }) {
 }
 
 function getPostLink(post: PostItem) {
-  switch (post.type) {
-    case "blog":
-      return `/m/blog/${post.id}`;
-    case "forum":
-      return `/m/forum/${post.id}`;
-    case "marketplace":
-      return `/m/marketplace/${post.id}`;
-  }
+  return `/m/forum/${post.id}`;
 }
 
-function getPostIcon(type: PostItem["type"]) {
-  switch (type) {
-    case "blog":
-      return FileText;
-    case "forum":
-      return MessageSquare;
-    case "marketplace":
-      return Store;
-  }
-}
-
-function getPostLabel(type: PostItem["type"]) {
-  switch (type) {
-    case "blog":
-      return "Blog";
-    case "forum":
-      return "Forum";
-    case "marketplace":
-      return "Marketplace";
-  }
+function getPostIcon() {
+  return MessageSquare;
 }
 
 export default function MemberProfileDetailPage({
@@ -290,11 +209,11 @@ export default function MemberProfileDetailPage({
     <>
       <header className="px-4 md:px-8 h-18 flex items-center bg-background shrink-0 border-b border-border sticky top-0 z-10">
         <Link
-          to="/m/members"
+          to="/m/homes"
           className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Members
+          Homes
         </Link>
       </header>
       <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
@@ -305,11 +224,10 @@ export default function MemberProfileDetailPage({
               {member.name}
             </h1>
             <p className="mt-3 text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">
-                {member.home_style} · {member.home_year}
-              </span>
-              {" · "}
               {member.location}
+              {member.home_style && <> · {member.home_style}</>}
+              {member.home_year && <> · {member.home_year}</>}
+              {member.home_name && <> · {member.home_name}</>}
             </p>
           </div>
 
@@ -403,7 +321,7 @@ export default function MemberProfileDetailPage({
                   {member.tags.map((tag: string) => (
                     <Link
                       key={tag}
-                      to={`/m/members?search=${encodeURIComponent(tag)}`}
+                      to={`/m/homes?search=${encodeURIComponent(tag)}`}
                       className="rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
                     >
                       {tag}
@@ -425,10 +343,10 @@ export default function MemberProfileDetailPage({
               ) : (
                 <div className="rounded-xl border border-border divide-y divide-border">
                   {posts.map((post) => {
-                    const Icon = getPostIcon(post.type);
+                    const Icon = getPostIcon();
                     return (
                       <Link
-                        key={`${post.type}-${post.id}`}
+                        key={`forum-${post.id}`}
                         to={getPostLink(post)}
                         className="group flex items-start gap-5 px-6 py-5 transition-colors hover:bg-muted/30"
                       >
@@ -444,14 +362,9 @@ export default function MemberProfileDetailPage({
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-display text-base font-semibold text-foreground group-hover:text-primary transition-colors truncate">
-                              {post.title || "Untitled"}
-                            </p>
-                            <span className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-                              {getPostLabel(post.type)}
-                            </span>
-                          </div>
+                          <p className="font-display text-base font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                            {post.title || "Untitled"}
+                          </p>
                           <p className="mt-1.5 text-sm text-muted-foreground">
                             {post.time}
                           </p>

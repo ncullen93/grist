@@ -88,11 +88,9 @@ function ForumMockup() {
     <div className="w-full rounded-xl bg-white/80 p-5 shadow-sm backdrop-blur">
       <div className="space-y-3">
         <div className="flex items-start gap-2.5">
-          <img
-            src="/mockups/avatar-1.jpg"
-            alt="Historic home"
-            className="size-6 shrink-0 rounded-full object-cover ring-1 ring-white"
-          />
+          <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-700 ring-1 ring-white">
+            <span className="text-[7px] font-semibold text-white">JR</span>
+          </div>
           <div className="min-w-0 rounded-lg bg-zinc-100 px-3 py-2">
             <p className="text-[9px] leading-relaxed text-gray-700">
               Anyone dealt with knob-and-tube in
@@ -102,11 +100,9 @@ function ForumMockup() {
           </div>
         </div>
         <div className="flex items-start gap-2.5">
-          <img
-            src="/mockups/avatar-2.jpg"
-            alt="Historic home"
-            className="size-6 shrink-0 rounded-full object-cover ring-1 ring-white"
-          />
+          <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-700 ring-1 ring-white">
+            <span className="text-[7px] font-semibold text-white">MT</span>
+          </div>
           <div className="min-w-0 rounded-lg bg-zinc-100 px-3 py-2">
             <p className="text-[9px] leading-relaxed text-gray-700">
               We kept ours in the walls that were
