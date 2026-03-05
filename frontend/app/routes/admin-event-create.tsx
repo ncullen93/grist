@@ -13,7 +13,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   const res = await apiGet(request, "/api/auth/me/");
   if (!res.ok) return redirect("/login");
   const user = await res.json();
-  if (!user.is_staff) return redirect("/m/homes");
+  if (!user.is_staff) return redirect("/m/home");
   return { user };
 }
 

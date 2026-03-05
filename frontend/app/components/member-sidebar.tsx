@@ -22,8 +22,8 @@ interface User {
 
 const navItems = [
   {
-    title: "Homes",
-    url: "/m/homes",
+    title: "Home",
+    url: "/m/home",
     icon: Home,
     exact: true,
   },
@@ -62,7 +62,7 @@ export function MemberSidebar({ user }: { user?: User }) {
 
   const initial = user?.first_name?.charAt(0).toUpperCase() || "G";
   const displayName = user?.first_name || "Grist Club";
-  const profileUrl = user?.profile_uid ? `/m/homes/${user.profile_uid}` : "/m/profile";
+  const profileUrl = user?.profile_uid ? `/m/home/${user.profile_uid}` : "/m/profile";
 
   const isActive = (item: (typeof navItems)[number]) => {
     if (item.exact) {

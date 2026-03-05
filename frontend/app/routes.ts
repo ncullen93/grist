@@ -32,10 +32,10 @@ export default [
 
   // Member dashboard (sidebar layout)
   route("m", "routes/member-layout.tsx", [
-    // Redirect /m to /m/homes
+    // Redirect /m to /m/home
     index("routes/member-redirect-homes.tsx"),
-    route("homes", "routes/member-homes.tsx"),
-    route("homes/:uid", "routes/member-home-detail.tsx"),
+    route("home", "routes/member-homes.tsx"),
+    route("home/:uid", "routes/member-home-detail.tsx"),
 
     // Forum
     route("forum", "routes/member-forum.tsx"),

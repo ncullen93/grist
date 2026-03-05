@@ -32,7 +32,7 @@ export default function SignupWelcome() {
         asChild
         className="h-12 w-full rounded-lg bg-primary text-sm font-medium"
       >
-        <Link to="/m/homes">Go to dashboard</Link>
+        <Link to="/m/home">Go to dashboard</Link>
       </Button>
     </>
   );

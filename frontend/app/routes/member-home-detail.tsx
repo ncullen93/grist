@@ -209,11 +209,11 @@ export default function MemberProfileDetailPage({
     <>
       <header className="px-4 md:px-8 h-18 flex items-center bg-background shrink-0 border-b border-border sticky top-0 z-10">
         <Link
-          to="/m/homes"
+          to="/m/home"
           className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Homes
+          Home
         </Link>
       </header>
       <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
@@ -321,7 +321,7 @@ export default function MemberProfileDetailPage({
                   {member.tags.map((tag: string) => (
                     <Link
                       key={tag}
-                      to={`/m/homes?search=${encodeURIComponent(tag)}`}
+                      to={`/m/home?search=${encodeURIComponent(tag)}`}
                       className="rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
                     >
                       {tag}

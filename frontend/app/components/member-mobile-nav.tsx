@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { title: "Homes", url: "/m/homes", icon: Home, exact: true },
+  { title: "Home", url: "/m/home", icon: Home, exact: true },
   { title: "Forum", url: "/m/forum", icon: MessageSquare },
   { title: "Events", url: "/m/events", icon: CalendarDays },
   { title: "Profile", url: "/m/profile", icon: UserCircle },

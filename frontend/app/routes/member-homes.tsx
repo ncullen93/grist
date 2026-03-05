@@ -326,7 +326,7 @@ export default function MemberHomesPage({ loaderData }: Route.ComponentProps) {
     if (!nextPage || fetcher.state !== "idle") return;
     const params = new URLSearchParams(searchParams);
     params.set("page", nextPage);
-    fetcher.load(`/m/homes?${params}`);
+    fetcher.load(`/m/home?${params}`);
   }, [nextPage, fetcher.state, searchParams]);
 
   useEffect(() => {
@@ -378,7 +378,7 @@ export default function MemberHomesPage({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
-      <PageHeader title="Homes" />
+      <PageHeader title="Home" />
       <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
         {/* Getting started checklist */}
         {completedCount < totalCount && (
@@ -443,7 +443,7 @@ export default function MemberHomesPage({ loaderData }: Route.ComponentProps) {
         {/* Quick stats */}
         <div className="mb-6 grid grid-cols-3 rounded-lg border border-border overflow-hidden">
           {[
-            { label: "Homes", value: String(stats.member_count), href: "/m/homes" },
+            { label: "Homes", value: String(stats.member_count), href: "/m/home" },
             { label: "Forum Threads", value: String(stats.forum_post_count), href: "/m/forum" },
             {
               label: "Upcoming Events",
@@ -580,7 +580,7 @@ export default function MemberHomesPage({ loaderData }: Route.ComponentProps) {
               {items.map((member) => (
                 <Link
                   key={member.uid}
-                  to={`/m/homes/${member.uid}`}
+                  to={`/m/home/${member.uid}`}
                   className="group block rounded-xl border border-border transition-colors hover:border-border/80 hover:bg-muted/30"
                 >
                   {member.photo && (

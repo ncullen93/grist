@@ -71,7 +71,7 @@ export function Navbar() {
           </ul>
 
           <Button variant="default" size="sm" className="bg-primary!" asChild>
-            <Link to="/m/homes" className="text-sm!">
+            <Link to="/m/home" className="text-sm!">
               Log in
             </Link>
           </Button>

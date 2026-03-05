@@ -213,7 +213,7 @@ export default function MemberForumDetailPage({
 
           <div className="mt-5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Link to={`/m/homes/${post.author_uid}`}>
+              <Link to={`/m/home/${post.author_uid}`}>
                 <img
                   src={post.home_photo}
                   alt=""
@@ -222,7 +222,7 @@ export default function MemberForumDetailPage({
               </Link>
               <div>
                 <Link
-                  to={`/m/homes/${post.author_uid}`}
+                  to={`/m/home/${post.author_uid}`}
                   className="text-sm font-semibold text-foreground hover:text-primary transition-colors"
                 >
                   {post.author_name}
@@ -267,7 +267,7 @@ export default function MemberForumDetailPage({
               {displayReplies.map((reply: ForumReply) => (
                 <div key={reply.id} className="px-6 py-5">
                   <div className="flex items-center gap-3">
-                    <Link to={`/m/homes/${reply.author_uid}`}>
+                    <Link to={`/m/home/${reply.author_uid}`}>
                       <img
                         src={reply.home_photo}
                         alt=""
@@ -276,7 +276,7 @@ export default function MemberForumDetailPage({
                     </Link>
                     <div className="min-w-0 flex-1">
                       <Link
-                        to={`/m/homes/${reply.author_uid}`}
+                        to={`/m/home/${reply.author_uid}`}
                         className="text-sm font-semibold text-foreground hover:text-primary transition-colors"
                       >
                         {reply.author_name}
